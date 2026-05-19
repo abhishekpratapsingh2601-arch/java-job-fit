@@ -50,3 +50,5 @@ feedback, login, or paid AI features are needed.
 The repository now includes a deploy-ready Spring Boot backend in `backend/`.
 The frontend uses browser-only analysis until `config.js` is updated with a
 live backend URL.
+
+See `DEPLOYMENT.md` for the Render + Supabase deployment steps.
