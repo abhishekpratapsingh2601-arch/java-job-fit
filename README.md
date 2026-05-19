@@ -46,3 +46,7 @@ http://localhost:4173
 Start without a backend to launch fast and stay at zero cost. See
 `BACKEND_ROADMAP.md` for the Spring Boot backend plan once saved reports,
 feedback, login, or paid AI features are needed.
+
+The repository now includes a deploy-ready Spring Boot backend in `backend/`.
+The frontend uses browser-only analysis until `config.js` is updated with a
+live backend URL.

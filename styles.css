@@ -209,6 +209,21 @@ textarea {
   line-height: 1.5;
 }
 
+input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  background: #fffdf9;
+  color: var(--ink);
+  padding: 0 12px;
+  outline: none;
+}
+
+input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(31, 122, 91, 0.12);
+}
+
 .primary-action {
   width: 100%;
   min-height: 52px;
@@ -364,6 +379,23 @@ li strong {
   color: var(--ink);
 }
 
+.feedback-form {
+  display: grid;
+  gap: 10px;
+}
+
+.feedback-form textarea {
+  min-height: 86px;
+}
+
+.form-status {
+  margin: 0;
+  min-height: 20px;
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 @media (max-width: 980px) {
   .workbench {
     grid-template-columns: 1fr;
@@ -430,6 +462,7 @@ li strong {
   .brand-panel,
   .input-panel,
   .empty-state,
+  .feedback-form,
   .primary-action,
   .secondary-action,
   .copy-action {

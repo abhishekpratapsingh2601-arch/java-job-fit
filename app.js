@@ -12,6 +12,10 @@ const printButton = document.querySelector("#print-button");
 const copyBulletsButton = document.querySelector("#copy-bullets");
 const copyQuestionsButton = document.querySelector("#copy-questions");
 const copyPlanButton = document.querySelector("#copy-plan");
+const feedbackForm = document.querySelector("#feedback-form");
+const feedbackEmail = document.querySelector("#feedback-email");
+const feedbackMessage = document.querySelector("#feedback-message");
+const feedbackStatus = document.querySelector("#feedback-status");
 const matchedList = document.querySelector("#matched-list");
 const missingList = document.querySelector("#missing-list");
 const bulletList = document.querySelector("#bullet-list");
@@ -19,6 +23,7 @@ const questionList = document.querySelector("#question-list");
 const planList = document.querySelector("#plan-list");
 
 let latestReport = null;
+const apiBase = (window.JAVAJOBFIT_API_BASE || "").replace(/\/$/, "");
 
 const sampleResume = `Rahul Sharma
 Java Backend Developer | 2.5 years experience
@@ -260,7 +265,56 @@ function renderList(node, items) {
   });
 }
 
+function normalizeReport(report) {
+  if (report.matchedSkills) {
+    return {
+      id: report.id,
+      score: report.score,
+      matched: report.matchedSkills,
+      missing: report.missingKeywords,
+      bullets: report.bulletSuggestions,
+      questions: report.interviewQuestions,
+      plan: report.prepPlan,
+    };
+  }
+  return report;
+}
+
+async function createBackendReport() {
+  const response = await fetch(`${apiBase}/api/reports`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      resumeText: resumeInput.value,
+      jobDescription: jobInput.value,
+      experienceLevel: experienceInput.value,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Backend report request failed");
+  }
+
+  return normalizeReport(await response.json());
+}
+
+async function buildReport() {
+  if (!apiBase) {
+    return analyze(resumeInput.value, jobInput.value, experienceInput.value);
+  }
+
+  try {
+    return await createBackendReport();
+  } catch (error) {
+    console.warn("Backend unavailable. Falling back to browser analysis.", error);
+    return analyze(resumeInput.value, jobInput.value, experienceInput.value);
+  }
+}
+
 function renderResults(report) {
+  report = normalizeReport(report);
   latestReport = report;
   scoreNode.textContent = report.score;
   scoreRing.style.background = `conic-gradient(var(--accent) ${report.score * 3.6}deg, #e1d8c7 0deg)`;
@@ -268,20 +322,22 @@ function renderResults(report) {
   renderList(
     matchedList,
     report.matched.length
-      ? report.matched.map((skill) => skill.label)
+      ? report.matched.map((skill) => (typeof skill === "string" ? skill : skill.label))
       : ["No major Java job keywords matched yet. Add truthful skills, projects, and tools from your actual experience."]
   );
 
+  const missingSkills = report.missing
+    .slice(0, 8)
+    .map((skill) => (typeof skill === "string" ? skill : skill.label));
+  const missingKeywordTerms = report.keywords
+    ? report.keywords.slice(0, Math.max(0, 8 - report.missing.length))
+    : [];
+  const missingItems = [...missingSkills, ...missingKeywordTerms];
+
   renderList(
     missingList,
-    [
-      ...report.missing.slice(0, 8).map((skill) => skill.label),
-      ...report.keywords.slice(0, Math.max(0, 8 - report.missing.length)),
-    ].length
-      ? [
-          ...report.missing.slice(0, 8).map((skill) => skill.label),
-          ...report.keywords.slice(0, Math.max(0, 8 - report.missing.length)),
-        ]
+    missingItems.length
+      ? missingItems
       : ["No obvious gaps from this job description. Focus on proof, numbers, and interview storytelling."],
   );
 
@@ -306,9 +362,9 @@ async function copyText(button, text) {
   }, 1200);
 }
 
-form.addEventListener("submit", (event) => {
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const report = analyze(resumeInput.value, jobInput.value, experienceInput.value);
+  const report = await buildReport();
   renderResults(report);
 });
 
@@ -328,6 +384,38 @@ clearButton.addEventListener("click", () => {
 
 printButton.addEventListener("click", () => {
   window.print();
+});
+
+feedbackForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!apiBase) {
+    feedbackStatus.textContent = "Backend is not configured yet. Feedback will work after API deployment.";
+    return;
+  }
+
+  try {
+    const response = await fetch(`${apiBase}/api/feedback`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        reportId: latestReport?.id,
+        email: feedbackEmail.value,
+        message: feedbackMessage.value,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Feedback request failed");
+    }
+
+    feedbackMessage.value = "";
+    feedbackStatus.textContent = "Thanks. Feedback saved.";
+  } catch (error) {
+    console.warn("Feedback failed", error);
+    feedbackStatus.textContent = "Feedback could not be saved. Please try again later.";
+  }
 });
 
 copyBulletsButton.addEventListener("click", () => {

@@ -138,11 +138,31 @@
               </div>
               <ol id="plan-list"></ol>
             </article>
+            <article class="result-card wide">
+              <h3>Feedback</h3>
+              <form class="feedback-form" id="feedback-form">
+                <input
+                  id="feedback-email"
+                  type="email"
+                  placeholder="Email for early access updates"
+                  autocomplete="email"
+                />
+                <textarea
+                  id="feedback-message"
+                  rows="3"
+                  placeholder="What should we improve before this becomes a paid product?"
+                  required
+                ></textarea>
+                <button type="submit" class="secondary-action">Send feedback</button>
+                <p class="form-status" id="feedback-status"></p>
+              </form>
+            </article>
           </div>
         </div>
       </section>
     </main>
 
+    <script src="config.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

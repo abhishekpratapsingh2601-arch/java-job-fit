@@ -1,0 +1,1 @@
+window.JAVAJOBFIT_API_BASE = "";

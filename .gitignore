@@ -6,3 +6,6 @@ build/
 .env
 .env.*
 *.log
+backend/target/
+backend/data/
+backend/.m2/

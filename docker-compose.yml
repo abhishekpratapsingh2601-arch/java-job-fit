@@ -1,0 +1,35 @@
+name: javajobfit
+
+services:
+  javajobfit-postgres:
+    image: postgres:16-alpine
+    container_name: javajobfit-postgres
+    environment:
+      POSTGRES_DB: javajobfit
+      POSTGRES_USER: javajobfit
+      POSTGRES_PASSWORD: javajobfit_local_password
+    ports:
+      - "55432:5432"
+    volumes:
+      - javajobfit-postgres-data:/var/lib/postgresql/data
+
+  javajobfit-backend:
+    build:
+      context: ./backend
+    container_name: javajobfit-backend
+    depends_on:
+      - javajobfit-postgres
+    environment:
+      PORT: 8080
+      DATABASE_URL: jdbc:postgresql://javajobfit-postgres:5432/javajobfit
+      DATABASE_USERNAME: javajobfit
+      DATABASE_PASSWORD: javajobfit_local_password
+      DATABASE_DRIVER: org.postgresql.Driver
+      HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+      ALLOWED_ORIGINS: http://localhost:4173,http://127.0.0.1:4173,https://abhishekpratapsingh2601-arch.github.io
+    ports:
+      - "8080:8080"
+
+volumes:
+  javajobfit-postgres-data:
+    name: javajobfit-postgres-data
