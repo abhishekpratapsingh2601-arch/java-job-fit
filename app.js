@@ -6,6 +6,7 @@ const emptyState = document.querySelector("#empty-state");
 const results = document.querySelector("#results");
 const scoreNode = document.querySelector("#score");
 const scoreRing = document.querySelector("#score-ring");
+const analyzeButton = document.querySelector("#analyze-button");
 const sampleButton = document.querySelector("#sample-button");
 const clearButton = document.querySelector("#clear-button");
 const printButton = document.querySelector("#print-button");
@@ -23,6 +24,7 @@ const questionList = document.querySelector("#question-list");
 const planList = document.querySelector("#plan-list");
 
 let latestReport = null;
+let latestReportSaved = false;
 const apiBase = (window.JAVAJOBFIT_API_BASE || "").replace(/\/$/, "");
 
 const sampleResume = `Rahul Sharma
@@ -56,7 +58,7 @@ const skillBank = [
   { label: "Spring Boot", terms: ["spring boot", "springboot"] },
   { label: "Spring MVC", terms: ["spring mvc", "spring web"] },
   { label: "Spring Security", terms: ["spring security", "oauth", "jwt"] },
-  { label: "REST APIs", terms: ["rest", "rest api", "restful", "api"] },
+  { label: "REST APIs", terms: ["rest", "rest api", "restful"] },
   { label: "Microservices", terms: ["microservice", "microservices"] },
   { label: "Hibernate/JPA", terms: ["hibernate", "jpa", "spring data"] },
   { label: "SQL", terms: ["sql", "mysql", "postgres", "postgresql", "oracle"] },
@@ -141,11 +143,15 @@ const genericStopWords = new Set([
 ]);
 
 function normalize(text) {
-  return text.toLowerCase().replace(/\s+/g, " ").trim();
+  return (text || "").toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 function hasAny(text, terms) {
-  return terms.some((term) => text.includes(term));
+  return terms.some((term) => new RegExp(`(^|[^a-z0-9+#])${escapeRegex(term)}([^a-z0-9+#]|$)`).test(text));
+}
+
+function escapeRegex(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function extractKeywords(text) {
@@ -269,6 +275,7 @@ function normalizeReport(report) {
   if (report.matchedSkills) {
     return {
       id: report.id,
+      saved: true,
       score: report.score,
       matched: report.matchedSkills,
       missing: report.missingKeywords,
@@ -302,20 +309,24 @@ async function createBackendReport() {
 
 async function buildReport() {
   if (!apiBase) {
-    return analyze(resumeInput.value, jobInput.value, experienceInput.value);
+    return { ...analyze(resumeInput.value, jobInput.value, experienceInput.value), saved: false };
   }
 
   try {
     return await createBackendReport();
   } catch (error) {
     console.warn("Backend unavailable. Falling back to browser analysis.", error);
-    return analyze(resumeInput.value, jobInput.value, experienceInput.value);
+    return { ...analyze(resumeInput.value, jobInput.value, experienceInput.value), saved: false };
   }
 }
 
 function renderResults(report) {
   report = normalizeReport(report);
   latestReport = report;
+  latestReportSaved = Boolean(report.saved && report.id);
+  feedbackStatus.textContent = latestReportSaved
+    ? ""
+    : "Report generated locally because the backend was unavailable. Feedback can be sent after a saved backend report.";
   scoreNode.textContent = report.score;
   scoreRing.style.background = `conic-gradient(var(--accent) ${report.score * 3.6}deg, #e1d8c7 0deg)`;
 
@@ -329,8 +340,11 @@ function renderResults(report) {
   const missingSkills = report.missing
     .slice(0, 8)
     .map((skill) => (typeof skill === "string" ? skill : skill.label));
+  const missingSkillKeys = new Set(missingSkills.map((skill) => skill.toLowerCase()));
   const missingKeywordTerms = report.keywords
-    ? report.keywords.slice(0, Math.max(0, 8 - report.missing.length))
+    ? report.keywords
+        .filter((keyword) => !missingSkillKeys.has(keyword.toLowerCase()))
+        .slice(0, Math.max(0, 8 - missingSkills.length))
     : [];
   const missingItems = [...missingSkills, ...missingKeywordTerms];
 
@@ -355,29 +369,58 @@ function formatItems(title, items) {
 
 async function copyText(button, text) {
   const original = button.textContent;
-  await navigator.clipboard.writeText(text);
-  button.textContent = "Copied";
-  setTimeout(() => {
-    button.textContent = original;
-  }, 1200);
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "absolute";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    button.textContent = "Copied";
+  } catch (error) {
+    console.warn("Copy failed", error);
+    button.textContent = "Copy failed";
+  } finally {
+    setTimeout(() => {
+      button.textContent = original;
+    }, 1200);
+  }
 }
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const report = await buildReport();
-  renderResults(report);
+  const originalText = analyzeButton.textContent;
+  analyzeButton.disabled = true;
+  analyzeButton.textContent = "Analyzing...";
+  try {
+    const report = await buildReport();
+    renderResults(report);
+  } finally {
+    analyzeButton.disabled = false;
+    analyzeButton.textContent = originalText;
+  }
 });
 
 sampleButton.addEventListener("click", () => {
   resumeInput.value = sampleResume;
   jobInput.value = sampleJob;
   experienceInput.value = "oneToThree";
-  renderResults(analyze(sampleResume, sampleJob, "oneToThree"));
+  renderResults({ ...analyze(sampleResume, sampleJob, "oneToThree"), saved: false });
 });
 
 clearButton.addEventListener("click", () => {
   form.reset();
   latestReport = null;
+  latestReportSaved = false;
+  feedbackForm.reset();
+  feedbackStatus.textContent = "";
   results.hidden = true;
   emptyState.hidden = false;
 });
@@ -390,6 +433,10 @@ feedbackForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!apiBase) {
     feedbackStatus.textContent = "Backend is not configured yet. Feedback will work after API deployment.";
+    return;
+  }
+  if (!latestReportSaved) {
+    feedbackStatus.textContent = "Please run Analyze fit first so feedback can attach to a saved report.";
     return;
   }
 

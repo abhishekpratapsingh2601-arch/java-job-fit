@@ -1,15 +1,20 @@
 package com.javajobfit.api.dto;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 
 public class ReportRequest {
     @NotBlank
+    @Size(max = 12000)
     private String resumeText;
 
     @NotBlank
+    @Size(max = 12000)
     private String jobDescription;
 
     @NotBlank
+    @Pattern(regexp = "fresher|oneToThree|threeToSix|sixPlus")
     private String experienceLevel;
 
     public String getResumeText() {

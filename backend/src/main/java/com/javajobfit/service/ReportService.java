@@ -15,6 +15,7 @@ import com.javajobfit.repository.ReportRepository;
 @Service
 public class ReportService {
     private static final String LIST_SEPARATOR = "\n---ITEM---\n";
+    private static final String REDACTED_TEXT = "[not stored for privacy]";
 
     private final AnalysisService analysisService;
     private final ReportRepository reportRepository;
@@ -31,8 +32,8 @@ public class ReportService {
                 request.getExperienceLevel());
 
         Report report = new Report();
-        report.setResumeText(request.getResumeText());
-        report.setJobDescription(request.getJobDescription());
+        report.setResumeText(REDACTED_TEXT);
+        report.setJobDescription(REDACTED_TEXT);
         report.setExperienceLevel(request.getExperienceLevel());
         report.setScore(result.getScore());
         report.setMatchedSkills(join(result.getMatchedSkills()));

@@ -22,6 +22,6 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, String> handleValidation(MethodArgumentNotValidException exception) {
-        return Collections.singletonMap("error", "Please provide resume text, job description, and experience level.");
+        return Collections.singletonMap("error", "Please provide valid resume text, job description, and experience level.");
     }
 }

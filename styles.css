@@ -238,6 +238,11 @@ input:focus {
   background: var(--accent);
 }
 
+button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
 .secondary-action,
 .copy-action {
   min-height: 42px;

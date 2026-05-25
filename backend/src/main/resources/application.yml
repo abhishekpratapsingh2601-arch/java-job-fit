@@ -13,7 +13,7 @@ spring:
     driver-class-name: ${DATABASE_DRIVER:org.h2.Driver}
   h2:
     console:
-      enabled: true
+      enabled: ${H2_CONSOLE_ENABLED:false}
       path: /h2-console
   jpa:
     hibernate:

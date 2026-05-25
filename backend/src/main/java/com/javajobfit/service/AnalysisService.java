@@ -20,7 +20,7 @@ public class AnalysisService {
             new Skill("Spring Boot", "spring boot", "springboot"),
             new Skill("Spring MVC", "spring mvc", "spring web"),
             new Skill("Spring Security", "spring security", "oauth", "jwt"),
-            new Skill("REST APIs", "rest", "rest api", "restful", "api"),
+            new Skill("REST APIs", "rest", "rest api", "restful"),
             new Skill("Microservices", "microservice", "microservices"),
             new Skill("Hibernate/JPA", "hibernate", "jpa", "spring data"),
             new Skill("SQL", "sql", "mysql", "postgres", "postgresql", "oracle"),
@@ -76,11 +76,17 @@ public class AnalysisService {
         int score = Math.max(18, Math.min(96, skillScore + keywordScore));
 
         List<String> missingKeywords = new ArrayList<>(missing);
+        Set<String> missingKeywordKeys = missingKeywords.stream()
+                .map(keyword -> keyword.toLowerCase(Locale.ROOT))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
         jobKeywords.stream()
                 .filter(keyword -> !resume.contains(keyword))
-                .filter(keyword -> !missingKeywords.contains(keyword))
+                .filter(keyword -> !missingKeywordKeys.contains(keyword.toLowerCase(Locale.ROOT)))
                 .limit(Math.max(0, 8 - missingKeywords.size()))
-                .forEach(missingKeywords::add);
+                .forEach(keyword -> {
+                    missingKeywords.add(keyword);
+                    missingKeywordKeys.add(keyword.toLowerCase(Locale.ROOT));
+                });
 
         return new AnalysisResult(
                 score,

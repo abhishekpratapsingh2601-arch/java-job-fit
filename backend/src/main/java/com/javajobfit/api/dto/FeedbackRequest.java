@@ -1,12 +1,18 @@
 package com.javajobfit.api.dto;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Email;
+import javax.validation.constraints.Size;
 
 public class FeedbackRequest {
     private Long reportId;
+
+    @Email
+    @Size(max = 254)
     private String email;
 
     @NotBlank
+    @Size(max = 2000)
     private String message;
 
     public Long getReportId() {
