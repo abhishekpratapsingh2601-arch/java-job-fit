@@ -272,6 +272,14 @@ function renderList(node, items) {
   });
 }
 
+function clearRenderedResults() {
+  [matchedList, missingList, bulletList, questionList, planList].forEach((node) => {
+    node.innerHTML = "";
+  });
+  scoreNode.textContent = "0";
+  scoreRing.style.background = "conic-gradient(var(--accent) 0deg, #e1d8c7 0deg)";
+}
+
 function normalizeReport(report) {
   if (report.matchedSkills) {
     return {
@@ -454,8 +462,7 @@ clearButton.addEventListener("click", () => {
   backendErrorMessage = "";
   feedbackForm.reset();
   feedbackStatus.textContent = "";
-  scoreNode.textContent = "0";
-  scoreRing.style.background = "conic-gradient(var(--accent) 0deg, #e1d8c7 0deg)";
+  clearRenderedResults();
   results.hidden = true;
   emptyState.hidden = false;
 });
