@@ -25,6 +25,7 @@ const planList = document.querySelector("#plan-list");
 
 let latestReport = null;
 let latestReportSaved = false;
+let backendErrorMessage = "";
 const apiBase = (window.JAVAJOBFIT_API_BASE || "").replace(/\/$/, "");
 
 const sampleResume = `Rahul Sharma
@@ -301,7 +302,24 @@ async function createBackendReport() {
   });
 
   if (!response.ok) {
-    throw new Error("Backend report request failed");
+    let detail = `HTTP ${response.status}`;
+    try {
+      const body = await response.json();
+      if (body && body.error) {
+        detail = body.error;
+        if (body.fields && typeof body.fields === "object") {
+          const fieldMsgs = Object.entries(body.fields)
+            .map(([field, message]) => `${field}: ${message}`)
+            .join("; ");
+          if (fieldMsgs) detail += ` (${fieldMsgs})`;
+        }
+      }
+    } catch (_) {
+      // body was not JSON
+    }
+    const error = new Error(`Backend report request failed — ${detail}`);
+    error.detail = detail;
+    throw error;
   }
 
   return normalizeReport(await response.json());
@@ -309,13 +327,20 @@ async function createBackendReport() {
 
 async function buildReport() {
   if (!apiBase) {
+    backendErrorMessage = "Backend is not configured. Showing local analysis only.";
     return { ...analyze(resumeInput.value, jobInput.value, experienceInput.value), saved: false };
   }
 
   try {
+    backendErrorMessage = "";
     return await createBackendReport();
   } catch (error) {
     console.warn("Backend unavailable. Falling back to browser analysis.", error);
+    const detail = error && error.detail ? ` Details: ${error.detail}.` : "";
+    backendErrorMessage =
+      "Backend could not generate a saved report, so this one was generated locally." +
+      detail +
+      " Feedback can be sent after the backend recovers.";
     return { ...analyze(resumeInput.value, jobInput.value, experienceInput.value), saved: false };
   }
 }
@@ -324,9 +349,13 @@ function renderResults(report) {
   report = normalizeReport(report);
   latestReport = report;
   latestReportSaved = Boolean(report.saved && report.id);
-  feedbackStatus.textContent = latestReportSaved
-    ? ""
-    : "Report generated locally because the backend was unavailable. Feedback can be sent after a saved backend report.";
+  if (latestReportSaved) {
+    feedbackStatus.textContent = "";
+  } else {
+    feedbackStatus.textContent =
+      backendErrorMessage ||
+      "Report generated locally. Feedback can be sent once the backend is configured.";
+  }
   scoreNode.textContent = report.score;
   scoreRing.style.background = `conic-gradient(var(--accent) ${report.score * 3.6}deg, #e1d8c7 0deg)`;
 
@@ -356,8 +385,8 @@ function renderResults(report) {
   );
 
   renderList(bulletList, report.bullets);
-  renderList(questionList, report.questions, true);
-  renderList(planList, report.plan, true);
+  renderList(questionList, report.questions);
+  renderList(planList, report.plan);
 
   emptyState.hidden = true;
   results.hidden = false;
@@ -412,6 +441,9 @@ sampleButton.addEventListener("click", () => {
   resumeInput.value = sampleResume;
   jobInput.value = sampleJob;
   experienceInput.value = "oneToThree";
+  backendErrorMessage = "Sample report shown using local analysis. Run Analyze fit to save it through the backend.";
+  feedbackMessage.value = "";
+  feedbackEmail.value = "";
   renderResults({ ...analyze(sampleResume, sampleJob, "oneToThree"), saved: false });
 });
 
@@ -419,8 +451,11 @@ clearButton.addEventListener("click", () => {
   form.reset();
   latestReport = null;
   latestReportSaved = false;
+  backendErrorMessage = "";
   feedbackForm.reset();
   feedbackStatus.textContent = "";
+  scoreNode.textContent = "0";
+  scoreRing.style.background = "conic-gradient(var(--accent) 0deg, #e1d8c7 0deg)";
   results.hidden = true;
   emptyState.hidden = false;
 });
@@ -440,6 +475,14 @@ feedbackForm.addEventListener("submit", async (event) => {
     return;
   }
 
+  const submitButton = feedbackForm.querySelector("button[type=submit]");
+  const originalLabel = submitButton ? submitButton.textContent : "";
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "Sending...";
+  }
+  feedbackStatus.textContent = "";
+
   try {
     const response = await fetch(`${apiBase}/api/feedback`, {
       method: "POST",
@@ -454,7 +497,7 @@ feedbackForm.addEventListener("submit", async (event) => {
     });
 
     if (!response.ok) {
-      throw new Error("Feedback request failed");
+      throw new Error(`Feedback request failed (HTTP ${response.status})`);
     }
 
     feedbackMessage.value = "";
@@ -462,6 +505,11 @@ feedbackForm.addEventListener("submit", async (event) => {
   } catch (error) {
     console.warn("Feedback failed", error);
     feedbackStatus.textContent = "Feedback could not be saved. Please try again later.";
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = originalLabel;
+    }
   }
 });
 

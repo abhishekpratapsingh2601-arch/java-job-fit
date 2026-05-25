@@ -37,7 +37,8 @@ public class FeedbackController {
 
         Feedback feedback = new Feedback();
         feedback.setReportId(request.getReportId());
-        feedback.setEmail(request.getEmail());
+        String email = request.getEmail();
+        feedback.setEmail(email == null || email.isBlank() ? null : email.trim());
         feedback.setMessage(request.getMessage());
         Feedback saved = feedbackRepository.save(feedback);
         return ResponseEntity.status(HttpStatus.CREATED).body(Collections.singletonMap("id", saved.getId()));
