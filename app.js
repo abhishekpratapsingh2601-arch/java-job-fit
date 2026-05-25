@@ -449,10 +449,15 @@ sampleButton.addEventListener("click", () => {
   resumeInput.value = sampleResume;
   jobInput.value = sampleJob;
   experienceInput.value = "oneToThree";
-  backendErrorMessage = "Sample report shown using local analysis. Run Analyze fit to save it through the backend.";
+  latestReport = null;
+  latestReportSaved = false;
+  backendErrorMessage = "";
   feedbackMessage.value = "";
   feedbackEmail.value = "";
-  renderResults({ ...analyze(sampleResume, sampleJob, "oneToThree"), saved: false });
+  feedbackStatus.textContent = "";
+  clearRenderedResults();
+  results.hidden = true;
+  emptyState.hidden = false;
 });
 
 clearButton.addEventListener("click", () => {
