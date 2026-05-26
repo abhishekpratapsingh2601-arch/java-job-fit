@@ -62,10 +62,14 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.premiumAvailable").value(true))
                 .andExpect(content().string(not(containsString("9999999999"))));
 
-        reportRepository.findAll().forEach(report -> {
-            org.assertj.core.api.Assertions.assertThat(report.getResumeText()).isEqualTo("[not stored for privacy]");
-            org.assertj.core.api.Assertions.assertThat(report.getJobDescription()).isEqualTo("[not stored for privacy]");
-        });
+        org.assertj.core.api.Assertions.assertThat(reportRepository.findAll())
+                .singleElement()
+                .satisfies(report -> {
+                    org.assertj.core.api.Assertions.assertThat(report.getResumeTextRedaction()).isEqualTo("[not stored for privacy]");
+                    org.assertj.core.api.Assertions.assertThat(report.getJobDescriptionRedaction()).isEqualTo("[not stored for privacy]");
+                    org.assertj.core.api.Assertions.assertThat(report.getMatchedSkills()).contains("Java");
+                    org.assertj.core.api.Assertions.assertThat(report.getExperienceLevel()).isEqualTo("oneToThree");
+                });
     }
 
     @Test

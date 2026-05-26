@@ -11,7 +11,7 @@ public class LeadRequest {
     @Size(max = 254)
     private String email;
 
-    @Pattern(regexp = "fresher|oneToThree|threeToFive|fiveToEight|senior|threeToSix|sixPlus|")
+    @Pattern(regexp = "|fresher|oneToThree|threeToFive|fiveToEight|senior|threeToSix|sixPlus")
     private String experienceLevel;
 
     @Size(max = 80)
@@ -20,9 +20,6 @@ public class LeadRequest {
     private Long reportId;
 
     private boolean consent;
-
-    @Size(max = 80)
-    private String source;
 
     public String getEmail() {
         return email;
@@ -64,11 +61,4 @@ public class LeadRequest {
         this.consent = consent;
     }
 
-    public String getSource() {
-        return source;
-    }
-
-    public void setSource(String source) {
-        this.source = source;
-    }
 }

@@ -14,17 +14,19 @@ import javax.persistence.Table;
 @Entity
 @Table(name = "reports")
 public class Report {
+    private static final String RAW_INPUT_NOT_STORED = "[not stored for privacy]";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Lob
-    @Column(nullable = false)
-    private String resumeText;
+    @Column(name = "resume_text", nullable = false)
+    private String resumeTextRedaction = RAW_INPUT_NOT_STORED;
 
     @Lob
-    @Column(nullable = false)
-    private String jobDescription;
+    @Column(name = "job_description", nullable = false)
+    private String jobDescriptionRedaction = RAW_INPUT_NOT_STORED;
 
     @Column(nullable = false)
     private String experienceLevel;
@@ -65,20 +67,17 @@ public class Report {
         return id;
     }
 
-    public String getResumeText() {
-        return resumeText;
+    public void markRawInputsNotStored() {
+        resumeTextRedaction = RAW_INPUT_NOT_STORED;
+        jobDescriptionRedaction = RAW_INPUT_NOT_STORED;
     }
 
-    public void setResumeText(String resumeText) {
-        this.resumeText = resumeText;
+    public String getResumeTextRedaction() {
+        return resumeTextRedaction;
     }
 
-    public String getJobDescription() {
-        return jobDescription;
-    }
-
-    public void setJobDescription(String jobDescription) {
-        this.jobDescription = jobDescription;
+    public String getJobDescriptionRedaction() {
+        return jobDescriptionRedaction;
     }
 
     public String getExperienceLevel() {

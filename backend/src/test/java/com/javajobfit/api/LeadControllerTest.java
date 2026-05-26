@@ -88,8 +88,6 @@ class LeadControllerTest {
 
     private Report buildReport() {
         Report report = new Report();
-        report.setResumeText("[not stored for privacy]");
-        report.setJobDescription("[not stored for privacy]");
         report.setExperienceLevel("threeToFive");
         report.setScore(72);
         report.setScoreSummary("Useful Java match with gaps.");

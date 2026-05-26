@@ -15,7 +15,6 @@ import com.javajobfit.repository.ReportRepository;
 @Service
 public class ReportService {
     private static final String LIST_SEPARATOR = "\n---ITEM---\n";
-    private static final String REDACTED_TEXT = "[not stored for privacy]";
     private static final List<String> PREMIUM_LOCKED_SECTIONS = Arrays.asList(
             "Full keyword analysis",
             "10+ resume bullet upgrades",
@@ -42,8 +41,7 @@ public class ReportService {
                 request.getExperienceLevel());
 
         Report report = new Report();
-        report.setResumeText(REDACTED_TEXT);
-        report.setJobDescription(REDACTED_TEXT);
+        report.markRawInputsNotStored();
         report.setExperienceLevel(request.getExperienceLevel());
         report.setScore(result.getScore());
         report.setScoreSummary(result.getScoreSummary());

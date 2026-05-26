@@ -41,7 +41,7 @@ public class LeadController {
         lead.setCountry(blankToNull(request.getCountry()));
         lead.setReportId(request.getReportId());
         lead.setConsent(request.isConsent());
-        lead.setSource(blankToNull(request.getSource()) == null ? "scan_result" : request.getSource().trim());
+        lead.setSource("scan_result");
 
         Lead saved = leadRepository.save(lead);
         return ResponseEntity.status(HttpStatus.CREATED).body(Collections.singletonMap("id", saved.getId()));

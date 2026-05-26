@@ -61,8 +61,7 @@ class FeedbackControllerTest {
     @Test
     void feedbackSavesWhenLinkedToExistingReport() throws Exception {
         Report report = new Report();
-        report.setResumeText("[not stored for privacy]");
-        report.setJobDescription("[not stored for privacy]");
+        report.markRawInputsNotStored();
         report.setExperienceLevel("oneToThree");
         report.setScore(82);
         report.setMatchedSkills("Java");
