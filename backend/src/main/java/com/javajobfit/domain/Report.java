@@ -33,10 +33,16 @@ public class Report {
     private int score;
 
     @Lob
+    private String scoreSummary;
+
+    @Lob
     private String matchedSkills;
 
     @Lob
     private String missingKeywords;
+
+    @Lob
+    private String topFixes;
 
     @Lob
     private String bulletSuggestions;
@@ -91,6 +97,14 @@ public class Report {
         this.score = score;
     }
 
+    public String getScoreSummary() {
+        return scoreSummary;
+    }
+
+    public void setScoreSummary(String scoreSummary) {
+        this.scoreSummary = scoreSummary;
+    }
+
     public String getMatchedSkills() {
         return matchedSkills;
     }
@@ -105,6 +119,14 @@ public class Report {
 
     public void setMissingKeywords(String missingKeywords) {
         this.missingKeywords = missingKeywords;
+    }
+
+    public String getTopFixes() {
+        return topFixes;
+    }
+
+    public void setTopFixes(String topFixes) {
+        this.topFixes = topFixes;
     }
 
     public String getBulletSuggestions() {

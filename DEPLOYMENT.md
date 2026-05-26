@@ -41,6 +41,7 @@ DATABASE_USERNAME=postgres
 DATABASE_PASSWORD=YOUR_SUPABASE_DATABASE_PASSWORD
 DATABASE_DRIVER=org.postgresql.Driver
 HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+PAYMENT_PROVIDER_ENABLED=false
 ```
 
 Do not commit the real password to GitHub.
@@ -77,6 +78,7 @@ DATABASE_PASSWORD=YOUR_SUPABASE_DATABASE_PASSWORD
 DATABASE_DRIVER=org.postgresql.Driver
 HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
 ALLOWED_ORIGINS=https://abhishekpratapsingh2601-arch.github.io
+PAYMENT_PROVIDER_ENABLED=false
 ```
 
 8. Deploy.

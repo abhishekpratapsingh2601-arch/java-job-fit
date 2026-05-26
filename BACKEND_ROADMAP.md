@@ -1,103 +1,75 @@
 # Backend Roadmap
 
-The fastest public launch should stay static first. It costs nothing, loads
-fast, and can be hosted on GitHub Pages, Netlify, or Vercel.
+JavaJobFit is already past the browser-only MVP stage. The backend is live and
+is now part of the product’s normal flow.
 
-Add a backend after the first users confirm they want saved reports, stronger AI
-rewrites, account history, or paid plans.
+## Current Backend
 
-## Phase 1: No Backend
+- Java 11
+- Spring Boot 2.7
+- Render web service
+- Supabase PostgreSQL in production
+- H2 file storage for local development
 
-Current MVP:
+Current endpoints:
 
-- Browser-only resume and job analysis.
-- No database.
-- No login.
-- No API keys.
-- No hosting cost.
+- `POST /api/reports`
+- `GET /api/reports/{id}`
+- `POST /api/leads`
+- `POST /api/feedback`
+- `GET /api/health`
+- `GET /`
 
-Best for:
+Current responsibilities:
 
-- Getting first visitors.
-- Sharing on LinkedIn and Java communities.
-- Validating whether people actually use the tool.
+- Generate and persist saved report output
+- Return a free preview response without full premium report content
+- Avoid storing raw resume or job description text
+- Capture optional lead emails for Pro report early access
+- Accept user feedback linked to saved reports
+- Provide health and root status endpoints
 
-## Phase 2: Lightweight Backend
+## Phase 1 Complete
 
-Add a Java Spring Boot API when we need persistence.
+Shipped behavior today:
 
-Recommended stack:
+- Frontend sample loading is input-only
+- Report generation happens only on `Analyze fit`
+- `Clear` resets fields and rendered output
+- Frontend can fall back to browser-only analysis if the backend is unavailable
 
-- Java 21
-- Spring Boot
-- Spring Web
-- Spring Validation
-- Spring Data JPA
-- PostgreSQL on Neon or Supabase free tier
-- Render, Fly.io, or Railway free/low-cost deploy
+## Next Backend Work
 
-Suggested endpoints:
+- Add more API coverage around end-to-end saved report and feedback flows
+- Add lightweight analytics or admin visibility for popular job-skill gaps
+- Add request logging and production-safe observability
+- Improve feedback moderation and follow-up workflow
 
-```text
-POST /api/reports
-GET /api/reports/{id}
-POST /api/feedback
-GET /api/health
-```
+## Phase 2 Options
 
-Suggested tables:
+Potential product upgrades:
 
-```text
-reports
-- id
-- resume_text
-- job_description
-- experience_level
-- score
-- matched_skills
-- missing_keywords
-- generated_report
-- created_at
+- Saved report history per user
+- Auth for returning users
+- Resume export with branded PDF output
+- Admin dashboard for reports and feedback
+- Rate limiting and abuse protection
 
-feedback
-- id
-- report_id
-- email
-- message
-- created_at
-```
+## Phase 3 AI Upgrade
 
-## Phase 3: AI Upgrade
-
-Add AI only after free users show demand.
+Add AI only if usage justifies the cost and product complexity.
 
 Paid features:
 
-- Full resume rewrite.
-- Cover letter generation.
-- Role-specific mock interview.
-- Saved prep history.
-- PDF report with branding.
+- Full resume rewrite
+- Cover letter generation
+- Role-specific mock interview
+- Saved prep history
+- PDF report with branding
 
 Low-risk AI approach:
 
-- Keep the current browser algorithm as the free tier.
-- Put AI rewrite behind login and payment.
-- Store only what users intentionally save.
-- Show a privacy note before processing resume text.
-
-## GitHub Repo Plan
-
-When GitHub account details are ready:
-
-1. Initialize git in this folder.
-2. Create a repo named `java-job-fit` or `javajobfit`.
-3. Commit the static MVP.
-4. Push to GitHub.
-5. Enable GitHub Pages from the main branch.
-
-Recommended first commit message:
-
-```text
-feat: launch browser-only Java resume fit MVP
-```
+- Keep the current browser algorithm as the free tier
+- Put AI rewrite behind login and payment
+- Store only what users intentionally save
+- Show a privacy note before processing resume text

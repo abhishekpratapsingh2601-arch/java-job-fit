@@ -5,28 +5,45 @@ const experienceInput = document.querySelector("#experience");
 const emptyState = document.querySelector("#empty-state");
 const results = document.querySelector("#results");
 const scoreNode = document.querySelector("#score");
+const scoreSummary = document.querySelector("#score-summary");
 const scoreRing = document.querySelector("#score-ring");
 const analyzeButton = document.querySelector("#analyze-button");
 const sampleButton = document.querySelector("#sample-button");
 const clearButton = document.querySelector("#clear-button");
 const printButton = document.querySelector("#print-button");
-const copyBulletsButton = document.querySelector("#copy-bullets");
-const copyQuestionsButton = document.querySelector("#copy-questions");
-const copyPlanButton = document.querySelector("#copy-plan");
-const feedbackForm = document.querySelector("#feedback-form");
-const feedbackEmail = document.querySelector("#feedback-email");
-const feedbackMessage = document.querySelector("#feedback-message");
-const feedbackStatus = document.querySelector("#feedback-status");
+const resumeError = document.querySelector("#resume-error");
+const jobError = document.querySelector("#job-error");
+const formError = document.querySelector("#form-error");
+const fixList = document.querySelector("#fix-list");
 const matchedList = document.querySelector("#matched-list");
 const missingList = document.querySelector("#missing-list");
 const bulletList = document.querySelector("#bullet-list");
 const questionList = document.querySelector("#question-list");
 const planList = document.querySelector("#plan-list");
+const lockedGrid = document.querySelector("#locked-grid");
+const copyBulletsButton = document.querySelector("#copy-bullets");
+const copyQuestionsButton = document.querySelector("#copy-questions");
+const copyPlanButton = document.querySelector("#copy-plan");
+const leadForm = document.querySelector("#lead-form");
+const leadEmail = document.querySelector("#lead-email");
+const leadCountry = document.querySelector("#lead-country");
+const leadConsent = document.querySelector("#lead-consent");
+const leadStatus = document.querySelector("#lead-status");
+const feedbackForm = document.querySelector("#feedback-form");
+const feedbackEmail = document.querySelector("#feedback-email");
+const feedbackMessage = document.querySelector("#feedback-message");
+const feedbackStatus = document.querySelector("#feedback-status");
+const premiumModal = document.querySelector("#premium-modal");
+const premiumClose = document.querySelector("#premium-close");
+const joinEarlyAccess = document.querySelector("#join-early-access");
+const notifyPro = document.querySelector("#notify-pro");
 
 let latestReport = null;
 let latestReportSaved = false;
-let backendErrorMessage = "";
+let resumePasteTracked = false;
+let jdPasteTracked = false;
 const apiBase = (window.JAVAJOBFIT_API_BASE || "").replace(/\/$/, "");
+const defaultAnalyzeLabel = "Analyze my Java resume";
 
 const sampleResume = `Rahul Sharma
 Java Backend Developer | 2.5 years experience
@@ -83,76 +100,51 @@ const skillBank = [
 ];
 
 const experienceGuidance = {
-  fresher: {
-    role: "entry-level Java developer",
-    bullets: [
-      "Built Java and Spring Boot projects with REST APIs, layered architecture, validation, and database integration.",
-      "Practiced DSA, OOP, collections, exception handling, and SQL through hands-on projects and coding problems.",
-    ],
-  },
-  oneToThree: {
-    role: "junior Java developer",
-    bullets: [
-      "Delivered Spring Boot REST APIs with JPA repositories, validation, exception handling, and unit tests.",
-      "Improved API reliability by debugging production issues, writing JUnit/Mockito tests, and collaborating in Agile sprints.",
-    ],
-  },
-  threeToSix: {
-    role: "mid-level Java backend engineer",
-    bullets: [
-      "Designed and maintained Spring Boot microservices with database optimization, security, and CI/CD delivery.",
-      "Reduced defects and deployment risk through test coverage, code reviews, observability, and clear API contracts.",
-    ],
-  },
-  sixPlus: {
-    role: "senior Java backend engineer",
-    bullets: [
-      "Led design of scalable Java microservices, owning architecture decisions, performance tuning, and production readiness.",
-      "Mentored engineers, improved engineering standards, and drove delivery across cross-functional backend initiatives.",
-    ],
-  },
+  fresher: "entry-level Java developer",
+  oneToThree: "junior Java developer",
+  threeToFive: "Java backend engineer",
+  fiveToEight: "senior Java backend engineer",
+  senior: "senior Java technical leader",
+  threeToSix: "mid-level Java backend engineer",
+  sixPlus: "senior Java backend engineer",
 };
 
 const genericStopWords = new Set([
-  "and",
-  "the",
-  "for",
-  "with",
-  "you",
-  "are",
-  "will",
-  "this",
-  "that",
-  "from",
-  "have",
-  "has",
-  "our",
-  "your",
-  "job",
-  "role",
-  "work",
-  "team",
-  "experience",
-  "candidate",
-  "developer",
-  "engineer",
-  "software",
-  "good",
-  "strong",
-  "using",
-  "build",
+  "and", "the", "for", "with", "you", "are", "will", "this", "that", "from", "have",
+  "has", "our", "your", "job", "role", "work", "team", "experience", "candidate",
+  "developer", "engineer", "software", "good", "strong", "using", "build",
 ]);
+
+function trackEvent(name, payload = {}) {
+  const event = {
+    name,
+    payload: {
+      ...payload,
+      hasReport: Boolean(latestReport),
+      timestamp: new Date().toISOString(),
+    },
+  };
+
+  if (window.JAVAJOBFIT_TRACK_EVENT) {
+    window.JAVAJOBFIT_TRACK_EVENT(event.name, event.payload);
+    return;
+  }
+
+  if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+    console.info("[JavaJobFit event]", event.name, event.payload);
+  }
+}
 
 function normalize(text) {
   return (text || "").toLowerCase().replace(/\s+/g, " ").trim();
 }
 
-function hasAny(text, terms) {
-  return terms.some((term) => new RegExp(`(^|[^a-z0-9+#])${escapeRegex(term)}([^a-z0-9+#]|$)`).test(text));
-}
-
 function escapeRegex(text) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function hasAny(text, terms) {
+  return terms.some((term) => new RegExp(`(^|[^a-z0-9+#])${escapeRegex(term)}([^a-z0-9+#]|$)`).test(text));
 }
 
 function extractKeywords(text) {
@@ -170,97 +162,102 @@ function extractKeywords(text) {
     .map(([word]) => word);
 }
 
-function analyze(resumeText, jobText, experience) {
+function analyzeLocally(resumeText, jobText, experience) {
   const resume = normalize(resumeText);
   const job = normalize(jobText);
   const relevantSkills = skillBank.filter((skill) => hasAny(job, skill.terms));
-  const matched = relevantSkills.filter((skill) => hasAny(resume, skill.terms));
-  const missing = relevantSkills.filter((skill) => !hasAny(resume, skill.terms));
+  const matched = relevantSkills.filter((skill) => hasAny(resume, skill.terms)).map((skill) => skill.label);
+  const missing = relevantSkills.filter((skill) => !hasAny(resume, skill.terms)).map((skill) => skill.label);
   const jobKeywords = extractKeywords(jobText);
   const keywordMatches = jobKeywords.filter((keyword) => resume.includes(keyword));
-  const skillScore = relevantSkills.length
-    ? Math.round((matched.length / relevantSkills.length) * 70)
-    : 35;
-  const keywordScore = jobKeywords.length
-    ? Math.round((keywordMatches.length / jobKeywords.length) * 30)
-    : 15;
+  const skillScore = relevantSkills.length ? Math.round((matched.length / relevantSkills.length) * 70) : 35;
+  const keywordScore = jobKeywords.length ? Math.round((keywordMatches.length / jobKeywords.length) * 30) : 15;
   const score = Math.max(18, Math.min(96, skillScore + keywordScore));
+  const missingKeywords = [...missing, ...jobKeywords.filter((keyword) => !resume.includes(keyword))].slice(0, 8);
+  const role = experienceGuidance[experience] || experienceGuidance.oneToThree;
+  const topFixes = [
+    missingKeywords.length
+      ? `Add truthful resume evidence for ${missingKeywords.slice(0, 3).join(", ")}.`
+      : "Keep the strongest Java proof visible near the top of your resume.",
+    `Rewrite your summary for a ${role} role using Java/Spring keywords you can defend.`,
+    "Turn one project or work item into a measurable backend impact bullet.",
+  ];
+
+  return normalizeReport({
+    id: null,
+    saved: false,
+    score,
+    scoreSummary: buildScoreSummary(score, matched, missingKeywords),
+    matchedSkills: matched,
+    missingKeywords,
+    topFixes,
+    bulletSuggestions: [
+      matched.length
+        ? `Position yourself as a ${role} by highlighting hands-on work with ${matched.slice(0, 3).join(", ")}.`
+        : `Add a project bullet that proves Java, Spring Boot, REST APIs, SQL, and testing experience for a ${role} role.`,
+    ],
+    interviewQuestions: [
+      "Explain how Spring Boot auto-configuration works and when you would override it.",
+      "How would you design a REST API for high traffic, validation, error handling, and versioning?",
+      "How do you write testable service-layer code using JUnit and Mockito?",
+    ],
+    prepPlan: [
+      `Day 1: Rewrite resume summary for the target ${role} role and add exact Java keywords you can honestly defend.`,
+      "Day 2: Review core Java, OOP, collections, exceptions, streams, and concurrency basics.",
+    ],
+    premiumAvailable: true,
+    premiumLockedSections: defaultLockedSections(),
+  });
+}
+
+function buildScoreSummary(score, matched, missingKeywords) {
+  if (score >= 80) return "Your resume is a strong fit for this Java role. Polish the remaining keyword gaps before applying.";
+  if (score >= 60) {
+    return `Your resume matches this Java role, but you are missing ${missingKeywords.length} important keywords. Fix the top gaps before applying.`;
+  }
+  if (!matched.length) {
+    return "Your resume needs clearer Java and Spring Boot evidence for this role. Add truthful project and skill proof before applying.";
+  }
+  return "Your resume has some useful Java signals, but it needs stronger alignment with this job description before applying.";
+}
+
+function defaultLockedSections() {
+  return [
+    "Full keyword analysis",
+    "10+ resume bullet upgrades",
+    "Keyword placement suggestions",
+    "Tailored Java/Spring Boot resume summary",
+    "Full Java interview question set",
+    "Full 7-day prep plan",
+    "Cover letter draft",
+    "LinkedIn headline/About rewrite",
+    "Export full PDF/DOCX report",
+  ];
+}
+
+function normalizeReport(report) {
+  const score = report.atsScore ?? report.score ?? 0;
+  const matched = report.matchedStrengths || report.matchedSkills || report.matched || [];
+  const missing = report.missingKeywords || report.missing || [];
+  const bullets = report.bulletUpgrades || report.bulletSuggestions || report.bullets || [];
+  const questions = report.interviewQuestions || report.questions || [];
+  const plan = report.prepPlan || report.plan || [];
 
   return {
+    id: report.reportId || report.id || null,
+    saved: Boolean(report.reportId || report.id),
     score,
-    matched,
-    missing,
-    keywords: jobKeywords.filter((keyword) => !resume.includes(keyword)).slice(0, 8),
-    bullets: buildBullets(matched, missing, experience),
-    questions: buildQuestions(missing, matched, experience),
-    plan: buildPlan(missing, matched, experience),
+    scoreSummary: report.scoreSummary || buildScoreSummary(score, matched, missing),
+    matched: matched.slice(0, 3),
+    missing: missing.slice(0, 5),
+    topFixes: (report.topFixes || []).slice(0, 3),
+    bullets: bullets.slice(0, 1),
+    questions: questions.slice(0, 3),
+    plan: plan.slice(0, 2),
+    premiumAvailable: report.premiumAvailable !== false,
+    premiumLockedSections: report.premiumLockedSections || defaultLockedSections(),
+    experienceLevel: report.experienceLevel || experienceInput.value,
   };
-}
-
-function buildBullets(matched, missing, experience) {
-  const guidance = experienceGuidance[experience];
-  const matchedLabels = matched.slice(0, 4).map((skill) => skill.label);
-  const missingLabels = missing.slice(0, 3).map((skill) => skill.label);
-  const bullets = [...guidance.bullets];
-
-  if (matchedLabels.length) {
-    bullets.unshift(
-      `Position yourself as a ${guidance.role} by highlighting hands-on work with ${matchedLabels.join(", ")}.`
-    );
-  }
-
-  if (missingLabels.length) {
-    bullets.push(
-      `Add truthful project or learning evidence for ${missingLabels.join(", ")} if you have used them. Avoid keyword stuffing without proof.`
-    );
-  }
-
-  bullets.push(
-    "Rewrite weak bullets with this pattern: action verb + Java/Spring skill + measurable business or technical result."
-  );
-
-  return bullets;
-}
-
-function buildQuestions(missing, matched, experience) {
-  const focus = [...missing, ...matched].slice(0, 5).map((skill) => skill.label);
-  const questions = [
-    "Explain how Spring Boot auto-configuration works and when you would override it.",
-    "How would you design a REST API for high traffic, validation, error handling, and versioning?",
-    "What happens internally when a Java HashMap handles collisions?",
-    "How do you write testable service-layer code using JUnit and Mockito?",
-    "How would you debug a slow API in production?",
-  ];
-
-  if (focus.includes("Microservices")) {
-    questions.unshift("How would you split a monolith into microservices without breaking existing users?");
-  }
-
-  if (focus.includes("Kafka")) {
-    questions.unshift("How do Kafka consumer groups, offsets, partitions, and retries work in a backend service?");
-  }
-
-  if (experience === "sixPlus") {
-    questions.unshift("Describe a backend architecture decision you led, including tradeoffs and production impact.");
-  }
-
-  return questions.slice(0, 7);
-}
-
-function buildPlan(missing, matched, experience) {
-  const missingLabels = missing.slice(0, 4).map((skill) => skill.label);
-  const matchedLabels = matched.slice(0, 3).map((skill) => skill.label);
-  const priority = missingLabels.length ? missingLabels.join(", ") : "Spring Boot, REST APIs, SQL, testing";
-
-  return [
-    `Day 1: Rewrite resume summary for the target ${experienceGuidance[experience].role} role and add exact matching Java keywords you can honestly defend.`,
-    `Day 2: Review core Java, OOP, collections, exceptions, streams, and concurrency basics.`,
-    `Day 3: Build or polish one Spring Boot REST API story using controller, service, repository, DTO, validation, and error handling.`,
-    `Day 4: Study priority gaps from this JD: ${priority}.`,
-    "Day 5: Practice SQL, JPA/Hibernate mappings, transactions, indexes, and common performance problems.",
-    "Day 6: Prepare testing, debugging, CI/CD, Git, and deployment examples from your own experience.",
-    `Day 7: Mock interview day. Practice ${matchedLabels.length ? matchedLabels.join(", ") : "your strongest Java skills"} plus one system design question.`,
-  ];
 }
 
 function renderList(node, items) {
@@ -272,36 +269,96 @@ function renderList(node, items) {
   });
 }
 
+function renderLockedSections(sections) {
+  lockedGrid.innerHTML = "";
+  sections.forEach((section) => {
+    const card = document.createElement("article");
+    card.className = "locked-card";
+    const badge = document.createElement("span");
+    const heading = document.createElement("h3");
+    const text = document.createElement("p");
+    const button = document.createElement("button");
+
+    badge.className = "lock-badge";
+    badge.textContent = "Locked";
+    heading.textContent = section;
+    text.textContent = "Unlock full Java resume optimization to access this section.";
+    button.type = "button";
+    button.className = "secondary-action premium-cta";
+    button.textContent = "Join early access";
+
+    card.append(badge, heading, text, button);
+    lockedGrid.appendChild(card);
+  });
+}
+
 function clearRenderedResults() {
-  [matchedList, missingList, bulletList, questionList, planList].forEach((node) => {
+  [fixList, matchedList, missingList, bulletList, questionList, planList].forEach((node) => {
     node.innerHTML = "";
   });
-  scoreNode.textContent = "0";
+  lockedGrid.innerHTML = "";
+  scoreNode.textContent = "--";
+  scoreSummary.textContent = "";
   scoreRing.style.background = "conic-gradient(var(--accent) 0deg, #e1d8c7 0deg)";
 }
 
-function normalizeReport(report) {
-  if (report.matchedSkills) {
-    return {
-      id: report.id,
-      saved: true,
-      score: report.score,
-      matched: report.matchedSkills,
-      missing: report.missingKeywords,
-      bullets: report.bulletSuggestions,
-      questions: report.interviewQuestions,
-      plan: report.prepPlan,
-    };
+function renderResults(report) {
+  latestReport = normalizeReport(report);
+  latestReportSaved = Boolean(latestReport.saved && latestReport.id);
+
+  scoreNode.textContent = latestReport.score;
+  scoreSummary.textContent = latestReport.scoreSummary;
+  scoreRing.style.background = `conic-gradient(var(--accent) ${latestReport.score * 3.6}deg, #e1d8c7 0deg)`;
+
+  renderList(fixList, latestReport.topFixes.length ? latestReport.topFixes : ["Add clearer Java/Spring proof before applying."]);
+  renderList(matchedList, latestReport.matched.length ? latestReport.matched : ["No major Java job keywords matched yet."]);
+  renderList(missingList, latestReport.missing.length ? latestReport.missing : ["No obvious gaps from this job description."]);
+  renderList(bulletList, latestReport.bullets);
+  renderList(questionList, latestReport.questions);
+  renderList(planList, latestReport.plan);
+  renderLockedSections(latestReport.premiumLockedSections);
+
+  feedbackStatus.textContent = latestReportSaved ? "" : "Feedback can still be sent, but it may not attach to a saved report.";
+  emptyState.hidden = true;
+  results.hidden = false;
+}
+
+function validateInputs() {
+  const resume = resumeInput.value.trim();
+  const job = jobInput.value.trim();
+  let valid = true;
+
+  resumeError.textContent = "";
+  jobError.textContent = "";
+  formError.textContent = "";
+
+  if (!resume) {
+    resumeError.textContent = "Resume is required.";
+    valid = false;
+  } else if (resume.length < 40) {
+    resumeError.textContent = "Please paste a longer resume for a useful scan.";
+    valid = false;
   }
-  return report;
+
+  if (!job) {
+    jobError.textContent = "Job description is required.";
+    valid = false;
+  } else if (job.length < 40) {
+    jobError.textContent = "Please paste a longer job description for a useful scan.";
+    valid = false;
+  }
+
+  if (!valid && (!resume || !job)) {
+    formError.textContent = "Please paste both your resume and the target job description.";
+  }
+
+  return valid;
 }
 
 async function createBackendReport() {
   const response = await fetch(`${apiBase}/api/reports`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       resumeText: resumeInput.value,
       jobDescription: jobInput.value,
@@ -310,23 +367,14 @@ async function createBackendReport() {
   });
 
   if (!response.ok) {
-    let detail = `HTTP ${response.status}`;
-    try {
-      const body = await response.json();
-      if (body && body.error) {
-        detail = body.error;
-        if (body.fields && typeof body.fields === "object") {
-          const fieldMsgs = Object.entries(body.fields)
-            .map(([field, message]) => `${field}: ${message}`)
-            .join("; ");
-          if (fieldMsgs) detail += ` (${fieldMsgs})`;
-        }
-      }
-    } catch (_) {
-      // body was not JSON
+    let message = "Something went wrong while generating your report. Please try again.";
+    if (response.status === 400) {
+      message = "Please paste both your resume and the target job description.";
+    } else if (response.status >= 500) {
+      message = "JavaJobFit is temporarily unavailable. Please try again in a minute.";
     }
-    const error = new Error(`Backend report request failed — ${detail}`);
-    error.detail = detail;
+    const error = new Error(message);
+    error.status = response.status;
     throw error;
   }
 
@@ -335,78 +383,36 @@ async function createBackendReport() {
 
 async function buildReport() {
   if (!apiBase) {
-    backendErrorMessage = "Backend is not configured. Showing local analysis only.";
-    return { ...analyze(resumeInput.value, jobInput.value, experienceInput.value), saved: false };
+    return analyzeLocally(resumeInput.value, jobInput.value, experienceInput.value);
   }
-
-  try {
-    backendErrorMessage = "";
-    return await createBackendReport();
-  } catch (error) {
-    console.warn("Backend unavailable. Falling back to browser analysis.", error);
-    const detail = error && error.detail ? ` Details: ${error.detail}.` : "";
-    backendErrorMessage =
-      "Backend could not generate a saved report, so this one was generated locally." +
-      detail +
-      " Feedback can be sent after the backend recovers.";
-    return { ...analyze(resumeInput.value, jobInput.value, experienceInput.value), saved: false };
-  }
+  return createBackendReport();
 }
 
-function renderResults(report) {
-  report = normalizeReport(report);
-  latestReport = report;
-  latestReportSaved = Boolean(report.saved && report.id);
-  if (latestReportSaved) {
-    feedbackStatus.textContent = "";
-  } else {
-    feedbackStatus.textContent =
-      backendErrorMessage ||
-      "Report generated locally. Feedback can be sent once the backend is configured.";
-  }
-  scoreNode.textContent = report.score;
-  scoreRing.style.background = `conic-gradient(var(--accent) ${report.score * 3.6}deg, #e1d8c7 0deg)`;
+function setLoading(isLoading) {
+  analyzeButton.disabled = isLoading;
+  analyzeButton.textContent = isLoading ? "Analyzing your Java resume..." : defaultAnalyzeLabel;
+}
 
-  renderList(
-    matchedList,
-    report.matched.length
-      ? report.matched.map((skill) => (typeof skill === "string" ? skill : skill.label))
-      : ["No major Java job keywords matched yet. Add truthful skills, projects, and tools from your actual experience."]
-  );
-
-  const missingSkills = report.missing
-    .slice(0, 8)
-    .map((skill) => (typeof skill === "string" ? skill : skill.label));
-  const missingSkillKeys = new Set(missingSkills.map((skill) => skill.toLowerCase()));
-  const missingKeywordTerms = report.keywords
-    ? report.keywords
-        .filter((keyword) => !missingSkillKeys.has(keyword.toLowerCase()))
-        .slice(0, Math.max(0, 8 - missingSkills.length))
-    : [];
-  const missingItems = [...missingSkills, ...missingKeywordTerms];
-
-  renderList(
-    missingList,
-    missingItems.length
-      ? missingItems
-      : ["No obvious gaps from this job description. Focus on proof, numbers, and interview storytelling."],
-  );
-
-  renderList(bulletList, report.bullets);
-  renderList(questionList, report.questions);
-  renderList(planList, report.plan);
-
-  emptyState.hidden = true;
-  results.hidden = false;
+function resetScanState() {
+  latestReport = null;
+  latestReportSaved = false;
+  formError.textContent = "";
+  feedbackStatus.textContent = "";
+  leadStatus.textContent = "";
+  clearRenderedResults();
+  results.hidden = true;
+  emptyState.hidden = false;
 }
 
 function formatItems(title, items) {
   return `${title}\n${items.map((item, index) => `${index + 1}. ${item}`).join("\n")}`;
 }
 
-async function copyText(button, text) {
+async function copyText(button, title, items) {
+  if (!latestReport || !items.length) return;
   const original = button.textContent;
   try {
+    const text = formatItems(title, items);
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(text);
     } else {
@@ -420,6 +426,7 @@ async function copyText(button, text) {
       document.execCommand("copy");
       document.body.removeChild(textarea);
     }
+    trackEvent("copy_clicked", { title });
     button.textContent = "Copied";
   } catch (error) {
     console.warn("Copy failed", error);
@@ -431,17 +438,34 @@ async function copyText(button, text) {
   }
 }
 
+function openPremiumModal() {
+  trackEvent("premium_cta_clicked", { reportId: latestReport?.id || null });
+  premiumModal.hidden = false;
+}
+
+function closePremiumModal() {
+  premiumModal.hidden = true;
+}
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const originalText = analyzeButton.textContent;
-  analyzeButton.disabled = true;
-  analyzeButton.textContent = "Analyzing...";
+  trackEvent("analyze_clicked", { experienceLevel: experienceInput.value });
+  if (!validateInputs()) {
+    trackEvent("scan_failed", { reason: "invalid_input" });
+    return;
+  }
+
+  setLoading(true);
   try {
     const report = await buildReport();
     renderResults(report);
+    trackEvent("scan_completed", { reportId: latestReport?.id || null, score: latestReport.score });
+  } catch (error) {
+    console.warn("Scan failed", error);
+    formError.textContent = error.message || "Something went wrong while generating your report. Please try again.";
+    trackEvent("scan_failed", { reason: error.status || "unknown" });
   } finally {
-    analyzeButton.disabled = false;
-    analyzeButton.textContent = originalText;
+    setLoading(false);
   }
 });
 
@@ -449,93 +473,137 @@ sampleButton.addEventListener("click", () => {
   resumeInput.value = sampleResume;
   jobInput.value = sampleJob;
   experienceInput.value = "oneToThree";
-  latestReport = null;
-  latestReportSaved = false;
-  backendErrorMessage = "";
-  feedbackMessage.value = "";
-  feedbackEmail.value = "";
-  feedbackStatus.textContent = "";
-  clearRenderedResults();
-  results.hidden = true;
-  emptyState.hidden = false;
+  resumeError.textContent = "";
+  jobError.textContent = "";
+  feedbackForm.reset();
+  leadForm.reset();
+  resetScanState();
+  trackEvent("sample_loaded");
 });
 
 clearButton.addEventListener("click", () => {
   form.reset();
-  latestReport = null;
-  latestReportSaved = false;
-  backendErrorMessage = "";
   feedbackForm.reset();
-  feedbackStatus.textContent = "";
-  clearRenderedResults();
-  results.hidden = true;
-  emptyState.hidden = false;
+  leadForm.reset();
+  resumePasteTracked = false;
+  jdPasteTracked = false;
+  resumeError.textContent = "";
+  jobError.textContent = "";
+  resetScanState();
+});
+
+resumeInput.addEventListener("input", () => {
+  if (!resumePasteTracked && resumeInput.value.trim().length > 30) {
+    resumePasteTracked = true;
+    trackEvent("resume_pasted");
+  }
+});
+
+jobInput.addEventListener("input", () => {
+  if (!jdPasteTracked && jobInput.value.trim().length > 30) {
+    jdPasteTracked = true;
+    trackEvent("jd_pasted");
+  }
 });
 
 printButton.addEventListener("click", () => {
+  trackEvent("pdf_export_clicked", { reportId: latestReport?.id || null, freePreview: true });
   window.print();
+});
+
+leadForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  leadStatus.textContent = "";
+
+  if (!leadEmail.value.trim()) {
+    leadStatus.textContent = "Please enter your email.";
+    return;
+  }
+
+  if (!apiBase) {
+    leadStatus.textContent = "Saved locally for this session. Backend lead capture is not configured.";
+    trackEvent("email_submitted", { localOnly: true });
+    return;
+  }
+
+  try {
+    const response = await fetch(`${apiBase}/api/leads`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: leadEmail.value,
+        experienceLevel: experienceInput.value,
+        country: leadCountry.value,
+        reportId: latestReport?.id || null,
+        consent: leadConsent.checked,
+        source: "scan_result",
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Lead request failed (${response.status})`);
+    leadStatus.textContent = "Saved. We'll notify you when full report unlock is available.";
+    trackEvent("email_submitted", { reportId: latestReport?.id || null });
+  } catch (error) {
+    console.warn("Lead capture failed", error);
+    leadStatus.textContent = "Email could not be saved. Please try again later.";
+  }
 });
 
 feedbackForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  feedbackStatus.textContent = "";
+
   if (!apiBase) {
     feedbackStatus.textContent = "Backend is not configured yet. Feedback will work after API deployment.";
     return;
   }
-  if (!latestReportSaved) {
-    feedbackStatus.textContent = "Please run Analyze fit first so feedback can attach to a saved report.";
-    return;
-  }
-
-  const submitButton = feedbackForm.querySelector("button[type=submit]");
-  const originalLabel = submitButton ? submitButton.textContent : "";
-  if (submitButton) {
-    submitButton.disabled = true;
-    submitButton.textContent = "Sending...";
-  }
-  feedbackStatus.textContent = "";
 
   try {
     const response = await fetch(`${apiBase}/api/feedback`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        reportId: latestReport?.id,
+        reportId: latestReport?.id || null,
         email: feedbackEmail.value,
         message: feedbackMessage.value,
       }),
     });
 
-    if (!response.ok) {
-      throw new Error(`Feedback request failed (HTTP ${response.status})`);
-    }
-
+    if (!response.ok) throw new Error(`Feedback request failed (${response.status})`);
     feedbackMessage.value = "";
     feedbackStatus.textContent = "Thanks. Feedback saved.";
+    trackEvent("feedback_submitted", { reportId: latestReport?.id || null });
   } catch (error) {
     console.warn("Feedback failed", error);
     feedbackStatus.textContent = "Feedback could not be saved. Please try again later.";
-  } finally {
-    if (submitButton) {
-      submitButton.disabled = false;
-      submitButton.textContent = originalLabel;
-    }
   }
 });
 
+document.addEventListener("click", (event) => {
+  if (event.target.closest(".premium-cta")) {
+    openPremiumModal();
+  }
+});
+
+premiumClose.addEventListener("click", closePremiumModal);
+notifyPro.addEventListener("click", closePremiumModal);
+joinEarlyAccess.addEventListener("click", () => {
+  closePremiumModal();
+  leadEmail.focus();
+});
+
+premiumModal.addEventListener("click", (event) => {
+  if (event.target === premiumModal) closePremiumModal();
+});
+
 copyBulletsButton.addEventListener("click", () => {
-  if (!latestReport) return;
-  copyText(copyBulletsButton, formatItems("Resume bullet upgrades", latestReport.bullets));
+  copyText(copyBulletsButton, "Resume bullet upgrades", latestReport?.bullets || []);
 });
 
 copyQuestionsButton.addEventListener("click", () => {
-  if (!latestReport) return;
-  copyText(copyQuestionsButton, formatItems("Java interview questions", latestReport.questions));
+  copyText(copyQuestionsButton, "Java interview questions", latestReport?.questions || []);
 });
 
 copyPlanButton.addEventListener("click", () => {
-  if (!latestReport) return;
-  copyText(copyPlanButton, formatItems("7-day prep plan", latestReport.plan));
+  copyText(copyPlanButton, "7-day prep plan preview", latestReport?.plan || []);
 });

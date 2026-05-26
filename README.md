@@ -1,33 +1,33 @@
 # JavaJobFit
 
-JavaJobFit is a zero-cost MVP for Java developers who want to tailor their
-resume and interview prep to a specific job description.
+JavaJobFit helps Java developers tailor a resume and interview prep plan to a
+specific job description.
 
-## What The MVP Does
+Current production setup:
 
-- Accepts resume text, target Java job description, and experience level.
-- Calculates a lightweight ATS-style fit score.
-- Finds matched Java/backend skills and missing keywords.
-- Suggests stronger resume bullet directions.
-- Generates Java interview questions and a 7-day prep plan.
-- Runs fully in the browser, so there is no API cost for version 1.
+- Frontend: HTML/CSS/JS on GitHub Pages
+- Backend: Java 11 Spring Boot on Render
+- Database: Supabase PostgreSQL
 
-## Free Launch Path
+## What It Does
 
-1. Ship this static version on GitHub Pages, Netlify, or Vercel.
-2. Share it in Java, Spring Boot, and job-search communities.
-3. Add feedback capture with a free Google Form or Tally form.
-4. Add a paid AI upgrade later only after users show demand.
+- Accepts resume text, target Java job description, and experience level
+- Calculates an ATS-style fit score
+- Finds matched Java/backend skills and missing keywords
+- Suggests stronger resume bullet directions
+- Generates Java interview questions and a 7-day prep plan
+- Saves generated reports through the backend API while returning only the free preview to the browser
+- Captures optional lead emails for Pro report early access
+- Accepts product feedback tied to saved reports
 
-## Next Features
+## Current UX Rules
 
-- Export report as PDF.
-- Add copy buttons for resume bullets.
-- Add sample resume and sample job description.
-- Add backend persistence for saved reports.
-- Add optional AI-powered rewrite mode with user-provided API key or paid plan.
+- `Try sample resume` fills the resume, job description, and experience level only
+- `Analyze my Java resume` generates the report
+- `Clear` resets the inputs and all rendered results
+- Paid plans are labeled as coming soon / early access until payment is configured
 
-## Local Use
+## Local Frontend Use
 
 Open `index.html` directly in a browser, or serve the folder with:
 
@@ -41,14 +41,26 @@ Then visit:
 http://localhost:4173
 ```
 
-## Backend
+The frontend is already configured to use the live Render backend in
+`config.js`.
 
-Start without a backend to launch fast and stay at zero cost. See
-`BACKEND_ROADMAP.md` for the Spring Boot backend plan once saved reports,
-feedback, login, or paid AI features are needed.
+## Local Backend Use
 
-The repository now includes a deploy-ready Spring Boot backend in `backend/`.
-The frontend uses browser-only analysis until `config.js` is updated with a
-live backend URL.
+The backend uses a repo-local Maven cache and settings so it stays isolated on
+this shared laptop:
 
-See `DEPLOYMENT.md` for the Render + Supabase deployment steps.
+```text
+backend/.m2
+backend/.mvn/settings.xml
+```
+
+Run it with:
+
+```bash
+cd backend
+mvn test
+mvn spring-boot:run
+```
+
+See `backend/README.md`, `PROJECT_ISOLATION.md`, and `DEPLOYMENT.md` for the
+backend, isolation, and deploy details.

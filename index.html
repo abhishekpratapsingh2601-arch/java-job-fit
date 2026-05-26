@@ -3,120 +3,157 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>JavaJobFit - Resume Tailor for Java Developers</title>
+    <title>JavaJobFit - ATS Resume Checker for Java Developers</title>
+    <meta
+      name="description"
+      content="Tailor your Java resume to a job description in 60 seconds. Get an ATS-style score, missing keywords, better resume bullets, Java interview questions, and a 7-day prep plan."
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260525-sample1" />
+    <link rel="stylesheet" href="styles.css?v=20260526-pro1" />
   </head>
   <body>
     <main class="app-shell">
-      <section class="workbench" aria-labelledby="product-title">
+      <section class="workbench" aria-labelledby="seo-title">
         <div class="brand-panel">
-          <div class="brand-lockup">
-            <span class="logo-mark">J</span>
-            <div>
-              <p class="eyebrow">JavaJobFit</p>
-              <h1 id="product-title">Tailor your Java resume to any job in 60 seconds.</h1>
+          <div>
+            <div class="brand-lockup">
+              <span class="logo-mark" aria-hidden="true">J</span>
+              <div>
+                <p class="eyebrow">JavaJobFit</p>
+                <h1 id="seo-title">JavaJobFit: ATS Resume Checker for Java Developers</h1>
+              </div>
             </div>
+            <h2 class="hero-headline">Tailor your Java resume to any job in 60 seconds.</h2>
+            <p class="intro">
+              Paste your resume and a Java/Spring Boot job description to get an ATS-style match score,
+              missing keywords, stronger resume bullets, interview questions, and a focused 7-day prep plan.
+            </p>
           </div>
-          <p class="intro">
-            Paste your resume and a Java job description. Get an ATS-style match
-            score, missing keywords, stronger bullet ideas, interview questions,
-            and a focused 7-day prep plan.
-          </p>
-          <div class="metric-strip" aria-label="Product highlights">
+
+          <div class="trust-strip" aria-label="Product trust points">
             <div>
-              <strong>0</strong>
-              <span>API cost</span>
+              <strong>Raw resume not stored</strong>
+              <span>Only generated report output and optional feedback/email are saved.</span>
             </div>
             <div>
-              <strong>5</strong>
-              <span>useful outputs</span>
+              <strong>ATS-style Java match report</strong>
+              <span>Built around Java, Spring Boot, backend, testing, and deployment signals.</span>
             </div>
             <div>
-              <strong>1</strong>
-              <span>click analysis</span>
+              <strong>60-second resume scan</strong>
+              <span>Fast preview before you spend hours rewriting manually.</span>
             </div>
           </div>
         </div>
 
-        <form class="input-panel" id="fit-form">
+        <form class="input-panel" id="fit-form" novalidate>
           <div class="control-row">
             <label for="experience">Experience level</label>
             <select id="experience" name="experience">
               <option value="fresher">Fresher</option>
               <option value="oneToThree" selected>1-3 years</option>
-              <option value="threeToSix">3-6 years</option>
-              <option value="sixPlus">6+ years</option>
+              <option value="threeToFive">3-5 years</option>
+              <option value="fiveToEight">5-8 years</option>
+              <option value="senior">Senior</option>
             </select>
           </div>
 
-          <div class="utility-actions" aria-label="Demo controls">
-            <button type="button" class="secondary-action" id="sample-button">Load sample</button>
+          <div class="utility-actions" aria-label="Resume scan controls">
+            <button type="button" class="secondary-action" id="sample-button">Try sample resume</button>
             <button type="button" class="secondary-action" id="clear-button">Clear</button>
           </div>
 
-          <label class="field">
-            <span>Your resume</span>
+          <div class="upload-row">
+            <button type="button" class="secondary-action disabled-action" id="upload-button" disabled>
+              Upload PDF/DOCX coming soon
+            </button>
+            <p>Paste remains the fastest and most private option for this scan.</p>
+          </div>
+
+          <label class="field" for="resume">
+            <span>Paste your resume text</span>
+            <small class="privacy-note">
+              Privacy: Your raw resume and job description are processed for this scan and are not stored.
+            </small>
             <textarea
               id="resume"
               name="resume"
               rows="12"
-              placeholder="Paste resume text here. Include skills, projects, work experience, and achievements."
+              placeholder="Paste resume text here. Include skills, projects, work experience, tools, and achievements."
+              aria-describedby="resume-error privacy-copy"
               required
             ></textarea>
+            <span class="error-message" id="resume-error" role="alert"></span>
           </label>
 
-          <label class="field">
-            <span>Target job description</span>
+          <label class="field" for="job">
+            <span>Paste the target Java/Spring Boot job description</span>
             <textarea
               id="job"
               name="job"
               rows="12"
-              placeholder="Paste Java/Spring Boot job description here."
+              placeholder="Paste the Java/Spring Boot job description here."
+              aria-describedby="job-error"
               required
             ></textarea>
+            <span class="error-message" id="job-error" role="alert"></span>
           </label>
 
-          <button class="primary-action" id="analyze-button" type="submit">Analyze fit</button>
+          <p class="trust-copy" id="privacy-copy">
+            Raw resume and job description are not stored. Only generated report output and optional
+            feedback/email are saved. Do not paste sensitive personal data you do not want processed.
+          </p>
+
+          <p class="form-status error-message" id="form-error" role="alert"></p>
+          <button class="primary-action" id="analyze-button" type="submit">Analyze my Java resume</button>
         </form>
       </section>
 
       <section class="results-panel" aria-live="polite">
         <div class="empty-state" id="empty-state">
-          <span class="terminal-dot"></span>
-          <h2>Ready for the first resume scan.</h2>
+          <div class="score-placeholder">Score will appear after analysis</div>
+          <h2>Ready for your first resume scan.</h2>
           <p>
-            Results will appear here after analysis. Resume text is processed to
-            generate the report, and only the report output is stored by the API.
+            Your ATS-style score, missing keywords, bullet upgrades, interview questions, and 7-day prep plan
+            will appear here.
           </p>
         </div>
 
         <div class="results" id="results" hidden>
           <div class="score-card">
             <div>
-              <p class="eyebrow">ATS fit score</p>
-              <h2><span id="score">0</span>%</h2>
+              <p class="eyebrow">Free JavaJobFit preview</p>
+              <h2>Your JavaJobFit Score: <span id="score">--</span>%</h2>
+              <p class="score-summary" id="score-summary"></p>
+              <p class="disclaimer">This is an ATS-style estimate, not a guarantee of interview selection.</p>
             </div>
             <div class="score-actions">
               <div class="score-ring" id="score-ring" aria-hidden="true"></div>
-              <button type="button" class="secondary-action" id="print-button">Export PDF</button>
+              <button type="button" class="secondary-action" id="print-button">Export report</button>
             </div>
           </div>
 
           <div class="result-grid">
+            <article class="result-card wide priority-card">
+              <h3>Top 3 fixes before applying</h3>
+              <ol id="fix-list"></ol>
+            </article>
+
             <article class="result-card">
               <h3>Matched strengths</h3>
               <ul id="matched-list"></ul>
             </article>
+
             <article class="result-card">
               <h3>Missing keywords</h3>
               <ul id="missing-list"></ul>
             </article>
+
             <article class="result-card wide">
               <div class="card-heading">
                 <h3>Resume bullet upgrades</h3>
@@ -124,6 +161,7 @@
               </div>
               <ul id="bullet-list"></ul>
             </article>
+
             <article class="result-card wide">
               <div class="card-heading">
                 <h3>Java interview questions</h3>
@@ -131,20 +169,67 @@
               </div>
               <ol id="question-list"></ol>
             </article>
+
             <article class="result-card wide">
               <div class="card-heading">
                 <h3>7-day prep plan</h3>
                 <button type="button" class="copy-action" id="copy-plan">Copy</button>
               </div>
               <ol id="plan-list"></ol>
+              <p class="preview-note">Free preview shows the first steps. Full prep plan is part of Pro.</p>
             </article>
-            <article class="result-card wide">
-              <h3>Feedback</h3>
+
+            <article class="result-card wide lead-card">
+              <h3>Send full report updates to my email</h3>
+              <form class="lead-form" id="lead-form">
+                <div class="lead-grid">
+                  <label for="lead-email">
+                    <span>Email</span>
+                    <input id="lead-email" type="email" autocomplete="email" placeholder="you@example.com" required />
+                  </label>
+                  <label for="lead-country">
+                    <span>Country</span>
+                    <select id="lead-country">
+                      <option value="">Select country</option>
+                      <option>India</option>
+                      <option>United States</option>
+                      <option>Canada</option>
+                      <option>United Kingdom</option>
+                      <option>Australia</option>
+                      <option>Remote/Other</option>
+                    </select>
+                  </label>
+                </div>
+                <label class="checkbox-row" for="lead-consent">
+                  <input id="lead-consent" type="checkbox" />
+                  <span>I agree to receive JavaJobFit product updates.</span>
+                </label>
+                <button type="submit" class="secondary-action">Save my email</button>
+                <p class="form-status" id="lead-status"></p>
+              </form>
+            </article>
+
+            <article class="result-card wide premium-panel" id="premium-panel">
+              <div>
+                <p class="eyebrow">Coming soon / Early access</p>
+                <h3>Unlock full Java resume optimization</h3>
+                <p>
+                  Pro will include full keyword analysis, 10+ bullet upgrades, keyword placement suggestions,
+                  a tailored Java/Spring Boot summary, cover letter draft, LinkedIn rewrite, and full exports.
+                </p>
+              </div>
+              <button type="button" class="primary-action compact-action premium-cta">Unlock full Java resume optimization</button>
+            </article>
+
+            <div class="locked-grid wide" id="locked-grid"></div>
+
+            <article class="result-card wide feedback-card">
+              <h3>Help us improve JavaJobFit</h3>
               <form class="feedback-form" id="feedback-form">
                 <input
                   id="feedback-email"
                   type="email"
-                  placeholder="Email for early access updates"
+                  placeholder="Email optional"
                   autocomplete="email"
                 />
                 <textarea
@@ -160,9 +245,113 @@
           </div>
         </div>
       </section>
+
+      <section class="pricing-section" aria-labelledby="pricing-title">
+        <h2 id="pricing-title">Pricing</h2>
+        <div class="pricing-grid">
+          <article class="pricing-card">
+            <h3>Free</h3>
+            <p class="price">₹0 / $0</p>
+            <ul>
+              <li>ATS-style score</li>
+              <li>Top missing keywords</li>
+              <li>Top matched strengths</li>
+              <li>1 bullet upgrade</li>
+              <li>3 interview questions</li>
+            </ul>
+          </article>
+          <article class="pricing-card featured">
+            <p class="eyebrow">Coming soon / Early access</p>
+            <h3>Pro Report</h3>
+            <p class="price">₹199 India / $9.99 international</p>
+            <ul>
+              <li>Full resume optimization</li>
+              <li>10+ bullet upgrades</li>
+              <li>Keyword placement suggestions</li>
+              <li>Full interview questions</li>
+              <li>7-day prep plan</li>
+              <li>Export full report</li>
+            </ul>
+          </article>
+          <article class="pricing-card">
+            <p class="eyebrow">Coming soon / Early access</p>
+            <h3>Job Search Pack</h3>
+            <p class="price">₹499/month India / $19/month international</p>
+            <ul>
+              <li>Multiple job scans</li>
+              <li>Saved reports</li>
+              <li>Cover letters</li>
+              <li>LinkedIn rewrite</li>
+              <li>Interview prep plans</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="seo-section" aria-label="About JavaJobFit">
+        <article>
+          <h2>Who JavaJobFit is for</h2>
+          <p>
+            JavaJobFit is for Java developers, Spring Boot developers, backend developers, Java freshers,
+            1-3 year Java developers, and software engineers applying to US, Canada, UK, Australia, India,
+            or remote roles.
+          </p>
+        </article>
+        <article>
+          <h2>What the Java resume scan checks</h2>
+          <p>
+            The scan compares your resume with a target job description and looks for Java backend signals
+            such as Spring Boot, REST APIs, SQL, JPA/Hibernate, testing, deployment, cloud, messaging, and
+            production support experience.
+          </p>
+        </article>
+        <article>
+          <h2>Java and Spring Boot keywords your resume may be missing</h2>
+          <p>
+            Common gaps include Spring Boot, REST API design, Hibernate/JPA, SQL, JUnit, Mockito, Docker,
+            CI/CD, Kafka, microservices, cloud deployment, observability, and debugging examples.
+          </p>
+        </article>
+        <article>
+          <h2>How the ATS-style score works</h2>
+          <p>
+            JavaJobFit estimates how closely your resume language matches the job description. It is a
+            practical resume improvement signal, not a promise that any ATS or recruiter will rank you a
+            specific way.
+          </p>
+        </article>
+        <article>
+          <h2>Privacy: raw resume text is not stored</h2>
+          <p>
+            Raw resume text and raw job descriptions are processed for the scan and are not stored in the
+            database. JavaJobFit stores generated report output, optional feedback, and optional email lead
+            data only.
+          </p>
+        </article>
+      </section>
     </main>
 
-    <script src="config.js?v=20260525-sample1"></script>
-    <script src="app.js?v=20260525-sample1"></script>
+    <div class="modal-backdrop" id="premium-modal" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="premium-modal-title">
+        <button type="button" class="modal-close" id="premium-close" aria-label="Close early access modal">×</button>
+        <p class="eyebrow">Coming soon / Early access</p>
+        <h2 id="premium-modal-title">Unlock the full JavaJobFit report</h2>
+        <div class="price-list">
+          <p><strong>India:</strong> ₹199 one-time</p>
+          <p><strong>US/International:</strong> $9.99 one-time</p>
+          <p><strong>Monthly:</strong> ₹499/month or $19/month</p>
+        </div>
+        <p>
+          Payments are not live yet. Join early access and we will notify you when Pro report unlock is available.
+        </p>
+        <div class="modal-actions">
+          <button type="button" class="primary-action" id="join-early-access">Join early access</button>
+          <button type="button" class="secondary-action" id="notify-pro">Notify me when Pro is live</button>
+        </div>
+      </section>
+    </div>
+
+    <script src="config.js?v=20260526-pro1"></script>
+    <script src="app.js?v=20260526-pro1"></script>
   </body>
 </html>

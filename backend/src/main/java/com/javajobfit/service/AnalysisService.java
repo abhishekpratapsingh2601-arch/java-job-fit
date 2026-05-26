@@ -90,12 +90,14 @@ public class AnalysisService {
 
         return new AnalysisResult(
                 score,
+                buildScoreSummary(score, matched, missingKeywords),
                 matched.isEmpty()
                         ? Arrays.asList("No major Java job keywords matched yet. Add truthful skills, projects, and tools from your actual experience.")
                         : matched,
                 missingKeywords.isEmpty()
                         ? Arrays.asList("No obvious gaps from this job description. Focus on proof, numbers, and interview storytelling.")
                         : missingKeywords,
+                buildTopFixes(missingKeywords, matched, experienceLevel),
                 buildBullets(matched, missing, experienceLevel),
                 buildQuestions(missing, matched, experienceLevel),
                 buildPlan(missing, matched, experienceLevel));
@@ -133,6 +135,36 @@ public class AnalysisService {
         }
         bullets.add("Rewrite weak bullets with this pattern: action verb + Java/Spring skill + measurable business or technical result.");
         return bullets;
+    }
+
+    private String buildScoreSummary(int score, List<String> matched, List<String> missingKeywords) {
+        int missingCount = missingKeywords.size();
+        if (score >= 80) {
+            return "Your resume is a strong fit for this Java role. Polish the remaining keyword gaps before applying.";
+        }
+        if (score >= 60) {
+            return "Your resume matches this Java role, but you are missing " + missingCount
+                    + " important keywords. Fix the top gaps before applying.";
+        }
+        if (matched.isEmpty()) {
+            return "Your resume needs clearer Java and Spring Boot evidence for this role. Add truthful project and skill proof before applying.";
+        }
+        return "Your resume has some useful Java signals, but it needs stronger alignment with this job description before applying.";
+    }
+
+    private List<String> buildTopFixes(List<String> missingKeywords, List<String> matched, String experienceLevel) {
+        List<String> fixes = new ArrayList<>();
+        if (!missingKeywords.isEmpty()) {
+            fixes.add("Add truthful resume evidence for " + String.join(", ", missingKeywords.stream().limit(3).collect(Collectors.toList())) + ".");
+        }
+        fixes.add("Rewrite your summary for a " + copyFor(experienceLevel).role + " role using the exact Java/Spring keywords you can defend.");
+        fixes.add("Turn one project or work item into a measurable backend impact bullet with Java, Spring Boot, database, and testing details.");
+        if (matched.isEmpty()) {
+            fixes.add("Move your strongest Java projects and tools into the top half of the resume so they are easy to scan.");
+        } else {
+            fixes.add("Keep your strongest matched skills visible near the top: " + String.join(", ", matched.stream().limit(3).collect(Collectors.toList())) + ".");
+        }
+        return fixes.stream().limit(3).collect(Collectors.toList());
     }
 
     private List<String> buildQuestions(List<String> missing, List<String> matched, String experienceLevel) {
@@ -183,6 +215,18 @@ public class AnalysisService {
                 return new ExperienceCopy("entry-level Java developer", Arrays.asList(
                         "Built Java and Spring Boot projects with REST APIs, layered architecture, validation, and database integration.",
                         "Practiced DSA, OOP, collections, exception handling, and SQL through hands-on projects and coding problems."));
+            case "threeToFive":
+                return new ExperienceCopy("Java backend engineer", Arrays.asList(
+                        "Delivered Java and Spring Boot services with REST APIs, persistence, validation, testing, and release support.",
+                        "Improved backend reliability through debugging, SQL tuning, code reviews, and production-ready error handling."));
+            case "fiveToEight":
+                return new ExperienceCopy("senior Java backend engineer", Arrays.asList(
+                        "Owned Spring Boot service design, database performance, API contracts, security, and CI/CD delivery.",
+                        "Reduced production risk through observability, test strategy, incident debugging, and cross-team backend delivery."));
+            case "senior":
+                return new ExperienceCopy("senior Java technical leader", Arrays.asList(
+                        "Led scalable Java backend design across services, owning tradeoffs, performance, reliability, and delivery standards.",
+                        "Mentored engineers, improved architecture quality, and partnered with product teams on backend roadmap execution."));
             case "threeToSix":
                 return new ExperienceCopy("mid-level Java backend engineer", Arrays.asList(
                         "Designed and maintained Spring Boot microservices with database optimization, security, and CI/CD delivery.",

@@ -16,6 +16,16 @@ import com.javajobfit.repository.ReportRepository;
 public class ReportService {
     private static final String LIST_SEPARATOR = "\n---ITEM---\n";
     private static final String REDACTED_TEXT = "[not stored for privacy]";
+    private static final List<String> PREMIUM_LOCKED_SECTIONS = Arrays.asList(
+            "Full keyword analysis",
+            "10+ resume bullet upgrades",
+            "Keyword placement suggestions",
+            "Tailored Java/Spring Boot resume summary",
+            "Full Java interview question set",
+            "Full 7-day prep plan",
+            "Cover letter draft",
+            "LinkedIn headline/About rewrite",
+            "Export full PDF/DOCX report");
 
     private final AnalysisService analysisService;
     private final ReportRepository reportRepository;
@@ -36,8 +46,10 @@ public class ReportService {
         report.setJobDescription(REDACTED_TEXT);
         report.setExperienceLevel(request.getExperienceLevel());
         report.setScore(result.getScore());
+        report.setScoreSummary(result.getScoreSummary());
         report.setMatchedSkills(join(result.getMatchedSkills()));
         report.setMissingKeywords(join(result.getMissingKeywords()));
+        report.setTopFixes(join(result.getTopFixes()));
         report.setBulletSuggestions(join(result.getBulletSuggestions()));
         report.setInterviewQuestions(join(result.getInterviewQuestions()));
         report.setPrepPlan(join(result.getPrepPlan()));
@@ -52,14 +64,30 @@ public class ReportService {
     }
 
     private ReportResponse toResponse(Report report) {
+        List<String> matchedSkills = split(report.getMatchedSkills());
+        List<String> missingKeywords = split(report.getMissingKeywords());
+        List<String> bulletSuggestions = split(report.getBulletSuggestions());
+        List<String> interviewQuestions = split(report.getInterviewQuestions());
+        List<String> prepPlan = split(report.getPrepPlan());
+
         ReportResponse response = new ReportResponse();
         response.setId(report.getId());
+        response.setReportId(report.getId());
         response.setScore(report.getScore());
-        response.setMatchedSkills(split(report.getMatchedSkills()));
-        response.setMissingKeywords(split(report.getMissingKeywords()));
-        response.setBulletSuggestions(split(report.getBulletSuggestions()));
-        response.setInterviewQuestions(split(report.getInterviewQuestions()));
-        response.setPrepPlan(split(report.getPrepPlan()));
+        response.setAtsScore(report.getScore());
+        response.setScoreSummary(report.getScoreSummary());
+        response.setMatchedSkills(limit(matchedSkills, 3));
+        response.setMatchedStrengths(limit(matchedSkills, 3));
+        response.setMissingKeywords(limit(missingKeywords, 5));
+        response.setTopFixes(limit(split(report.getTopFixes()), 3));
+        response.setBulletSuggestions(limit(bulletSuggestions, 1));
+        response.setBulletUpgrades(limit(bulletSuggestions, 1));
+        response.setInterviewQuestions(limit(interviewQuestions, 3));
+        response.setPrepPlan(limit(prepPlan, 2));
+        response.setFreePreview(true);
+        response.setPremiumAvailable(true);
+        response.setPremiumLockedSections(PREMIUM_LOCKED_SECTIONS);
+        response.setExperienceLevel(report.getExperienceLevel());
         response.setCreatedAt(report.getCreatedAt());
         return response;
     }
@@ -74,5 +102,9 @@ public class ReportService {
         }
         return Arrays.stream(value.split(LIST_SEPARATOR))
                 .collect(Collectors.toList());
+    }
+
+    private List<String> limit(List<String> values, int maxItems) {
+        return values.stream().limit(maxItems).collect(Collectors.toList());
     }
 }

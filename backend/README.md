@@ -1,6 +1,6 @@
 # JavaJobFit Backend
 
-Spring Boot API for JavaJobFit reports and feedback.
+Spring Boot API for JavaJobFit reports, lead capture, and feedback.
 
 ## Endpoints
 
@@ -8,8 +8,13 @@ Spring Boot API for JavaJobFit reports and feedback.
 GET  /api/health
 POST /api/reports
 GET  /api/reports/{id}
+POST /api/leads
 POST /api/feedback
 ```
+
+`POST /api/reports` processes raw resume text and raw job descriptions, but the
+service stores only generated report output. The free API response returns a
+limited preview until a real paid unlock flow exists.
 
 ## Local Run
 
@@ -53,10 +58,17 @@ DATABASE_PASSWORD=postgres_password
 DATABASE_DRIVER=org.postgresql.Driver
 HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
 ALLOWED_ORIGINS=https://abhishekpratapsingh2601-arch.github.io
+PAYMENT_PROVIDER_ENABLED=false
+STRIPE_SECRET_KEY=
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
 ```
 
 If the frontend is served at a custom domain later, add it to `ALLOWED_ORIGINS`
 as a comma-separated value.
+
+Payment variables are scaffolding only. Leave `PAYMENT_PROVIDER_ENABLED=false`
+until Stripe or Razorpay checkout is implemented for real.
 
 ## Free Deployment Recommendation
 
