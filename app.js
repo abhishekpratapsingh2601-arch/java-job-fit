@@ -48,9 +48,11 @@ let latestReportSaved = false;
 let resumePasteTracked = false;
 let jdPasteTracked = false;
 let progressTimer = null;
+let progressMessageTimer = null;
 let progressPercent = 0;
 const apiBase = (window.JAVAJOBFIT_API_BASE || "").replace(/\/$/, "");
 const defaultAnalyzeLabel = "Analyze my Java resume";
+const backendTimeoutMs = 18000;
 
 const sampleResume = `Rahul Sharma
 Java Backend Developer | 2.5 years experience
@@ -264,6 +266,7 @@ function normalizeReport(report) {
     premiumAvailable: report.premiumAvailable !== false,
     premiumLockedSections: report.premiumLockedSections || defaultLockedSections(),
     experienceLevel: report.experienceLevel || experienceInput.value,
+    notice: report.notice || "",
   };
 }
 
@@ -334,6 +337,7 @@ function updateProgress(percent) {
 
 function startScanProgress() {
   clearInterval(progressTimer);
+  clearTimeout(progressMessageTimer);
   updateProgress(0);
   emptyState.hidden = true;
   results.hidden = true;
@@ -348,17 +352,27 @@ function startScanProgress() {
       progressTimer = null;
     }
   }, 180);
+
+  progressMessageTimer = setTimeout(() => {
+    if (!scanProgress.hidden && progressPercent >= 80) {
+      progressStatus.textContent = "Waking the backend. Preparing a browser preview if it takes too long...";
+    }
+  }, 7000);
 }
 
 function stopScanProgress() {
   clearInterval(progressTimer);
+  clearTimeout(progressMessageTimer);
   progressTimer = null;
+  progressMessageTimer = null;
   scanProgress.hidden = true;
 }
 
 function finishScanProgress() {
   clearInterval(progressTimer);
+  clearTimeout(progressMessageTimer);
   progressTimer = null;
+  progressMessageTimer = null;
   updateProgress(100);
   return new Promise((resolve) => setTimeout(resolve, 360));
 }
@@ -379,7 +393,9 @@ function renderResults(report) {
   renderList(planList, latestReport.plan);
   renderLockedSections(latestReport.premiumLockedSections);
 
-  feedbackStatus.textContent = latestReportSaved ? "" : "Feedback can still be sent, but it may not attach to a saved report.";
+  feedbackStatus.textContent = latestReportSaved
+    ? ""
+    : latestReport.notice || "Feedback can still be sent, but it may not attach to a saved report.";
   emptyState.hidden = true;
   scanProgress.hidden = true;
   results.hidden = false;
@@ -418,15 +434,19 @@ function validateInputs() {
 }
 
 async function createBackendReport() {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), backendTimeoutMs);
+
   const response = await fetch(`${apiBase}/api/reports`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal: controller.signal,
     body: JSON.stringify({
       resumeText: resumeInput.value,
       jobDescription: jobInput.value,
       experienceLevel: experienceInput.value,
     }),
-  });
+  }).finally(() => clearTimeout(timeoutId));
 
   if (!response.ok) {
     let message = "Something went wrong while generating your report. Please try again.";
@@ -447,7 +467,19 @@ async function buildReport() {
   if (!apiBase) {
     return analyzeLocally(resumeInput.value, jobInput.value, experienceInput.value);
   }
-  return createBackendReport();
+  try {
+    return await createBackendReport();
+  } catch (error) {
+    if (error.name === "AbortError" || error.status >= 500 || error instanceof TypeError) {
+      const report = analyzeLocally(resumeInput.value, jobInput.value, experienceInput.value);
+      report.saved = false;
+      report.id = null;
+      report.notice =
+        "The backend is taking longer than usual, so this free preview was generated in your browser. Try again in a minute to save the report.";
+      return report;
+    }
+    throw error;
+  }
 }
 
 function setLoading(isLoading) {
