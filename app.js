@@ -3,6 +3,11 @@ const resumeInput = document.querySelector("#resume");
 const jobInput = document.querySelector("#job");
 const experienceInput = document.querySelector("#experience");
 const emptyState = document.querySelector("#empty-state");
+const scanProgress = document.querySelector("#scan-progress");
+const progressValue = document.querySelector("#progress-value");
+const progressStatus = document.querySelector("#progress-status");
+const progressBar = document.querySelector("#progress-bar");
+const progressSteps = Array.from(document.querySelectorAll(".progress-steps li"));
 const results = document.querySelector("#results");
 const scoreNode = document.querySelector("#score");
 const scoreSummary = document.querySelector("#score-summary");
@@ -42,6 +47,8 @@ let latestReport = null;
 let latestReportSaved = false;
 let resumePasteTracked = false;
 let jdPasteTracked = false;
+let progressTimer = null;
+let progressPercent = 0;
 const apiBase = (window.JAVAJOBFIT_API_BASE || "").replace(/\/$/, "");
 const defaultAnalyzeLabel = "Analyze my Java resume";
 
@@ -302,6 +309,60 @@ function clearRenderedResults() {
   scoreRing.style.background = "conic-gradient(var(--accent) 0deg, #e1d8c7 0deg)";
 }
 
+function updateProgress(percent) {
+  progressPercent = Math.max(0, Math.min(100, Math.round(percent)));
+  progressValue.textContent = `${progressPercent}%`;
+  progressBar.style.width = `${progressPercent}%`;
+
+  const activeStep = progressPercent < 28 ? 0 : progressPercent < 58 ? 1 : progressPercent < 88 ? 2 : 3;
+  progressSteps.forEach((step, index) => {
+    step.classList.toggle("active", index <= activeStep);
+  });
+
+  if (progressPercent < 28) {
+    progressStatus.textContent = "Reading resume signals...";
+  } else if (progressPercent < 58) {
+    progressStatus.textContent = "Comparing Java and Spring Boot keywords...";
+  } else if (progressPercent < 88) {
+    progressStatus.textContent = "Building your free report preview...";
+  } else if (progressPercent < 100) {
+    progressStatus.textContent = "Finalizing recommendations...";
+  } else {
+    progressStatus.textContent = "Report ready.";
+  }
+}
+
+function startScanProgress() {
+  clearInterval(progressTimer);
+  updateProgress(0);
+  emptyState.hidden = true;
+  results.hidden = true;
+  scanProgress.hidden = false;
+
+  progressTimer = setInterval(() => {
+    const remaining = 94 - progressPercent;
+    const increment = Math.max(1, Math.ceil(remaining * 0.08));
+    updateProgress(progressPercent + increment);
+    if (progressPercent >= 94) {
+      clearInterval(progressTimer);
+      progressTimer = null;
+    }
+  }, 180);
+}
+
+function stopScanProgress() {
+  clearInterval(progressTimer);
+  progressTimer = null;
+  scanProgress.hidden = true;
+}
+
+function finishScanProgress() {
+  clearInterval(progressTimer);
+  progressTimer = null;
+  updateProgress(100);
+  return new Promise((resolve) => setTimeout(resolve, 360));
+}
+
 function renderResults(report) {
   latestReport = normalizeReport(report);
   latestReportSaved = Boolean(latestReport.saved && latestReport.id);
@@ -320,6 +381,7 @@ function renderResults(report) {
 
   feedbackStatus.textContent = latestReportSaved ? "" : "Feedback can still be sent, but it may not attach to a saved report.";
   emptyState.hidden = true;
+  scanProgress.hidden = true;
   results.hidden = false;
 }
 
@@ -399,6 +461,7 @@ function resetScanState() {
   formError.textContent = "";
   feedbackStatus.textContent = "";
   leadStatus.textContent = "";
+  stopScanProgress();
   clearRenderedResults();
   results.hidden = true;
   emptyState.hidden = false;
@@ -456,12 +519,16 @@ form.addEventListener("submit", async (event) => {
   }
 
   setLoading(true);
+  startScanProgress();
   try {
     const report = await buildReport();
+    await finishScanProgress();
     renderResults(report);
     trackEvent("scan_completed", { reportId: latestReport?.id || null, score: latestReport.score });
   } catch (error) {
     console.warn("Scan failed", error);
+    stopScanProgress();
+    emptyState.hidden = false;
     formError.textContent = error.message || "Something went wrong while generating your report. Please try again.";
     trackEvent("scan_failed", { reason: error.status || "unknown" });
   } finally {
