@@ -41,7 +41,6 @@ public class ReportService {
                 request.getExperienceLevel());
 
         Report report = new Report();
-        report.markRawInputsNotStored();
         report.setExperienceLevel(request.getExperienceLevel());
         report.setScore(result.getScore());
         report.setScoreSummary(result.getScoreSummary());

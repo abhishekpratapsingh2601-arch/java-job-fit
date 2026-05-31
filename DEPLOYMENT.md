@@ -41,6 +41,8 @@ DATABASE_USERNAME=postgres
 DATABASE_PASSWORD=YOUR_SUPABASE_DATABASE_PASSWORD
 DATABASE_DRIVER=org.postgresql.Driver
 HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+SPRING_PROFILES_ACTIVE=prod
+FLYWAY_BASELINE_ON_MIGRATE=true
 PAYMENT_PROVIDER_ENABLED=false
 ```
 
@@ -77,11 +79,18 @@ DATABASE_USERNAME=postgres
 DATABASE_PASSWORD=YOUR_SUPABASE_DATABASE_PASSWORD
 DATABASE_DRIVER=org.postgresql.Driver
 HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+SPRING_PROFILES_ACTIVE=prod
+FLYWAY_BASELINE_ON_MIGRATE=true
 ALLOWED_ORIGINS=https://abhishekpratapsingh2601-arch.github.io
 PAYMENT_PROVIDER_ENABLED=false
 ```
 
 8. Deploy.
+
+Flyway runs automatically on Render startup. `SPRING_PROFILES_ACTIVE=prod`
+keeps Hibernate in schema-validation mode instead of auto-updating tables.
+`FLYWAY_BASELINE_ON_MIGRATE=true` is important for the current Supabase database
+if it already has JavaJobFit tables from the older Hibernate-managed setup.
 
 ## Step 3: Test Backend
 
@@ -118,8 +127,24 @@ After GitHub Pages updates, the live site will use the backend API.
 ## Live Test Checklist
 
 - Open the GitHub Pages frontend.
-- Click `Load sample`.
-- Click `Analyze fit`.
+- Click `Try sample resume`.
+- Click `Analyze my Java resume`.
 - Confirm report appears.
+- Submit the lead email form with a test email.
 - Submit feedback.
-- Check Supabase table data for `reports` and `feedback`.
+- Check Supabase table data for `reports`, `leads`, and `feedback`.
+
+## Database Migrations
+
+Migration files live in:
+
+```text
+backend/src/main/resources/db/migration
+```
+
+Render does not need a separate migration job for this MVP. The backend runs
+Flyway migrations before JPA starts. If migration fails, the app should fail to
+start instead of silently changing schema through Hibernate.
+
+Privacy rule: migrations must not add raw resume, raw job description, analytics
+payload, or uploaded file storage columns.

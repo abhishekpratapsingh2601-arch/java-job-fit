@@ -5,16 +5,17 @@ import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
 public class ReportRequest {
-    @NotBlank
-    @Size(min = 40, max = 12000)
+    @NotBlank(message = "Resume is required.")
+    @Size(min = 40, max = 12000, message = "Please paste a longer resume for a useful scan.")
     private String resumeText;
 
-    @NotBlank
-    @Size(min = 40, max = 12000)
+    @NotBlank(message = "Job description is required.")
+    @Size(min = 40, max = 12000, message = "Please paste a longer job description for a useful scan.")
     private String jobDescription;
 
-    @NotBlank
-    @Pattern(regexp = "fresher|oneToThree|threeToFive|fiveToEight|senior|threeToSix|sixPlus")
+    @NotBlank(message = "Experience level is required.")
+    @Pattern(regexp = "fresher|oneToThree|threeToFive|fiveToEight|senior|threeToSix|sixPlus",
+            message = "Please select a supported experience level.")
     private String experienceLevel;
 
     public String getResumeText() {

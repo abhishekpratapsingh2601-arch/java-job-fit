@@ -635,7 +635,6 @@ leadForm.addEventListener("submit", async (event) => {
         country: leadCountry.value,
         reportId: latestReport?.id || null,
         consent: leadConsent.checked,
-        source: "scan_result",
       }),
     });
 

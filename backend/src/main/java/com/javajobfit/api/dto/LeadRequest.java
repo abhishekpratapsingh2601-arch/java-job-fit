@@ -6,12 +6,13 @@ import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
 public class LeadRequest {
-    @NotBlank
-    @Email
+    @NotBlank(message = "Email is required.")
+    @Email(message = "Please enter a valid email address.")
     @Size(max = 254)
     private String email;
 
-    @Pattern(regexp = "|fresher|oneToThree|threeToFive|fiveToEight|senior|threeToSix|sixPlus")
+    @Pattern(regexp = "|fresher|oneToThree|threeToFive|fiveToEight|senior|threeToSix|sixPlus",
+            message = "Please select a supported experience level.")
     private String experienceLevel;
 
     @Size(max = 80)

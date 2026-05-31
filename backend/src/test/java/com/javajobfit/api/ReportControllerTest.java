@@ -65,8 +65,6 @@ class ReportControllerTest {
         org.assertj.core.api.Assertions.assertThat(reportRepository.findAll())
                 .singleElement()
                 .satisfies(report -> {
-                    org.assertj.core.api.Assertions.assertThat(report.getResumeTextRedaction()).isEqualTo("[not stored for privacy]");
-                    org.assertj.core.api.Assertions.assertThat(report.getJobDescriptionRedaction()).isEqualTo("[not stored for privacy]");
                     org.assertj.core.api.Assertions.assertThat(report.getMatchedSkills()).contains("Java");
                     org.assertj.core.api.Assertions.assertThat(report.getExperienceLevel()).isEqualTo("oneToThree");
                 });
@@ -82,6 +80,37 @@ class ReportControllerTest {
                                 + "\"experienceLevel\":\"invalid\""
                                 + "}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createReportRejectsEmptyInputWithoutEchoingRawText() throws Exception {
+        mockMvc.perform(post("/api/reports")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"resumeText\":\"\","
+                                + "\"jobDescription\":\"\","
+                                + "\"experienceLevel\":\"oneToThree\""
+                                + "}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Please provide valid resume text, job description, and experience level."))
+                .andExpect(jsonPath("$.fields.resumeText").value("Resume is required."))
+                .andExpect(jsonPath("$.fields.jobDescription").value("Job description is required."));
+    }
+
+    @Test
+    void createReportRejectsTooShortInputWithoutEchoingRawText() throws Exception {
+        mockMvc.perform(post("/api/reports")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"resumeText\":\"Private phone 9999999999\","
+                                + "\"jobDescription\":\"Secret target role text\","
+                                + "\"experienceLevel\":\"oneToThree\""
+                                + "}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.resumeText").value("Please paste a longer resume for a useful scan."))
+                .andExpect(jsonPath("$.fields.jobDescription").value("Please paste a longer job description for a useful scan."))
+                .andExpect(content().string(not(containsString("9999999999"))))
+                .andExpect(content().string(not(containsString("Secret target role text"))));
     }
 
     @Test

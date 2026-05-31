@@ -45,8 +45,7 @@ class LeadControllerTest {
                                 + "\"experienceLevel\":\"threeToFive\","
                                 + "\"country\":\"India\","
                                 + "\"reportId\":" + reportId + ","
-                                + "\"consent\":true,"
-                                + "\"source\":\"scan_result\""
+                                + "\"consent\":true"
                                 + "}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber());
@@ -68,10 +67,10 @@ class LeadControllerTest {
         mockMvc.perform(post("/api/leads")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{"
-                                + "\"email\":\"not-an-email\","
-                                + "\"source\":\"scan_result\""
+                                + "\"email\":\"not-an-email\""
                                 + "}"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.email").value("Please enter a valid email address."));
     }
 
     @Test

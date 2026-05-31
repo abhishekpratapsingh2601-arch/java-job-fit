@@ -46,6 +46,29 @@ By default, the backend uses H2 file storage:
 backend/data/javajobfit
 ```
 
+Schema changes are managed with Flyway migrations in:
+
+```text
+backend/src/main/resources/db/migration
+```
+
+Flyway runs automatically when the Spring Boot app starts. Hibernate is set to
+`ddl-auto=validate`, so it checks the schema but does not create or alter
+tables. To apply migrations locally, start the backend:
+
+```bash
+cd backend
+mvn -Dmaven.repo.local=./.m2 spring-boot:run
+```
+
+You can also run with the explicit development profile:
+
+```bash
+SPRING_PROFILES_ACTIVE=dev mvn -Dmaven.repo.local=./.m2 spring-boot:run
+```
+
+Tests use the same migrations against an in-memory H2 database.
+
 ## Production Environment Variables
 
 Use these when deploying with PostgreSQL:
@@ -57,6 +80,8 @@ DATABASE_USERNAME=postgres_user
 DATABASE_PASSWORD=postgres_password
 DATABASE_DRIVER=org.postgresql.Driver
 HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+SPRING_PROFILES_ACTIVE=prod
+FLYWAY_BASELINE_ON_MIGRATE=true
 ALLOWED_ORIGINS=https://abhishekpratapsingh2601-arch.github.io
 PAYMENT_PROVIDER_ENABLED=false
 STRIPE_SECRET_KEY=
@@ -67,8 +92,20 @@ RAZORPAY_KEY_SECRET=
 If the frontend is served at a custom domain later, add it to `ALLOWED_ORIGINS`
 as a comma-separated value.
 
+`FLYWAY_BASELINE_ON_MIGRATE=true` lets Flyway safely adopt the existing Supabase
+schema if it was originally created by Hibernate. New empty databases will run
+all migrations from `V1`. Existing databases will be baselined and then run
+newer migrations such as the legacy raw-input-column cleanup.
+
 Payment variables are scaffolding only. Leave `PAYMENT_PROVIDER_ENABLED=false`
 until Stripe or Razorpay checkout is implemented for real.
+
+## Migration Privacy Rules
+
+Migrations must never add columns for raw resume text, raw job description text,
+or uploaded files. The `reports` table stores generated report output only. The
+`leads` table stores email lead metadata only. The `feedback` table stores
+feedback messages only.
 
 ## Free Deployment Recommendation
 

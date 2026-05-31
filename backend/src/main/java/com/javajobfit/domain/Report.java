@@ -7,26 +7,15 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.Lob;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 
 @Entity
 @Table(name = "reports")
 public class Report {
-    private static final String RAW_INPUT_NOT_STORED = "[not stored for privacy]";
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Lob
-    @Column(name = "resume_text", nullable = false)
-    private String resumeTextRedaction = RAW_INPUT_NOT_STORED;
-
-    @Lob
-    @Column(name = "job_description", nullable = false)
-    private String jobDescriptionRedaction = RAW_INPUT_NOT_STORED;
 
     @Column(nullable = false)
     private String experienceLevel;
@@ -34,25 +23,25 @@ public class Report {
     @Column(nullable = false)
     private int score;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String scoreSummary;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String matchedSkills;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String missingKeywords;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String topFixes;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String bulletSuggestions;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String interviewQuestions;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String prepPlan;
 
     @Column(nullable = false)
@@ -65,19 +54,6 @@ public class Report {
 
     public Long getId() {
         return id;
-    }
-
-    public void markRawInputsNotStored() {
-        resumeTextRedaction = RAW_INPUT_NOT_STORED;
-        jobDescriptionRedaction = RAW_INPUT_NOT_STORED;
-    }
-
-    public String getResumeTextRedaction() {
-        return resumeTextRedaction;
-    }
-
-    public String getJobDescriptionRedaction() {
-        return jobDescriptionRedaction;
     }
 
     public String getExperienceLevel() {

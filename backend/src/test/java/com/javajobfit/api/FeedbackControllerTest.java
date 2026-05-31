@@ -59,9 +59,20 @@ class FeedbackControllerTest {
     }
 
     @Test
+    void feedbackRejectsBlankMessage() throws Exception {
+        mockMvc.perform(post("/api/feedback")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"email\":\"user@example.com\","
+                                + "\"message\":\"\""
+                                + "}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.message").value("Feedback message is required."));
+    }
+
+    @Test
     void feedbackSavesWhenLinkedToExistingReport() throws Exception {
         Report report = new Report();
-        report.markRawInputsNotStored();
         report.setExperienceLevel("oneToThree");
         report.setScore(82);
         report.setMatchedSkills("Java");

@@ -58,9 +58,13 @@ Run it with:
 
 ```bash
 cd backend
-mvn test
+mvn -Dmaven.repo.local=./.m2 test
 mvn spring-boot:run
 ```
+
+Backend schema changes run through Flyway migrations in
+`backend/src/main/resources/db/migration`. Hibernate validates the schema and no
+longer uses `ddl-auto=update`.
 
 See `backend/README.md`, `PROJECT_ISOLATION.md`, and `DEPLOYMENT.md` for the
 backend, isolation, and deploy details.
