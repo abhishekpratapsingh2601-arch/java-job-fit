@@ -1,0 +1,26 @@
+[
+  {
+    "name": "strong_match",
+    "experience": "threeToFive",
+    "resume": "Java Backend Developer with 3 years experience. Skills: Java, Spring Boot, REST APIs, Hibernate, JPA, MySQL, JUnit, Mockito, Maven, Git, Docker, microservices. Built Spring Boot REST APIs with validation, exception handling, and MySQL persistence. Wrote JUnit and Mockito tests. Used Docker and CI/CD for deployment.",
+    "job": "We are hiring a Java Developer. Required: strong Core Java and Spring Boot, REST API design, microservices, Hibernate, JPA, SQL databases, JUnit, Mockito, Git, Maven, Docker, CI/CD. Kafka experience is a plus."
+  },
+  {
+    "name": "partial_match",
+    "experience": "oneToThree",
+    "resume": "Java developer. Skills: Java, Spring Boot, REST APIs, MySQL. Built REST APIs with Spring Boot and MySQL persistence and wrote unit tests.",
+    "job": "Required: strong Core Java, Spring Boot, REST API design, Kafka, Kubernetes, Docker, AWS, microservices, system design. Mockito and JUnit required. Terraform is a plus."
+  },
+  {
+    "name": "weak_match",
+    "experience": "fresher",
+    "resume": "Marketing specialist with experience in content writing, SEO, social media campaigns, and email marketing. Skilled in copywriting and brand strategy.",
+    "job": "Required: strong Core Java, Spring Boot, REST APIs, Hibernate, SQL, JUnit, Docker, microservices, system design, Kafka."
+  },
+  {
+    "name": "stemming_and_boundaries",
+    "experience": "oneToThree",
+    "resume": "I have done unit testing and deployed services. Worked on data structures and algorithms. Built REST APIs.",
+    "job": "Required: unit tests, deploy services, data structure, algorithm design, REST API. Strong testing skills required."
+  }
+]

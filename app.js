@@ -80,32 +80,61 @@ Required skills:
 - Kafka experience is a plus
 - Good debugging, Agile collaboration, and production support mindset`;
 
+// Mirrors AnalysisService.SKILLS on the backend. Keep both lists in sync.
 const skillBank = [
   { label: "Java", terms: ["java", "core java", "jdk"] },
+  { label: "Kotlin", terms: ["kotlin"] },
   { label: "Spring Boot", terms: ["spring boot", "springboot"] },
   { label: "Spring MVC", terms: ["spring mvc", "spring web"] },
   { label: "Spring Security", terms: ["spring security", "oauth", "jwt"] },
+  { label: "Reactive/WebFlux", terms: ["webflux", "reactive", "project reactor"] },
   { label: "REST APIs", terms: ["rest", "rest api", "restful"] },
+  { label: "GraphQL", terms: ["graphql"] },
+  { label: "gRPC", terms: ["grpc"] },
   { label: "Microservices", terms: ["microservice", "microservices"] },
   { label: "Hibernate/JPA", terms: ["hibernate", "jpa", "spring data"] },
   { label: "SQL", terms: ["sql", "mysql", "postgres", "postgresql", "oracle"] },
   { label: "NoSQL", terms: ["mongodb", "redis", "dynamodb", "cassandra"] },
+  { label: "Elasticsearch", terms: ["elasticsearch", "elk"] },
   { label: "Kafka", terms: ["kafka", "event streaming"] },
   { label: "RabbitMQ", terms: ["rabbitmq", "message queue"] },
   { label: "Docker", terms: ["docker", "container"] },
   { label: "Kubernetes", terms: ["kubernetes", "k8s"] },
   { label: "AWS", terms: ["aws", "ec2", "s3", "lambda", "cloudwatch"] },
   { label: "Azure", terms: ["azure"] },
+  { label: "GCP", terms: ["gcp", "google cloud"] },
+  { label: "Terraform/IaC", terms: ["terraform", "iac"] },
   { label: "CI/CD", terms: ["ci/cd", "jenkins", "github actions", "gitlab ci"] },
   { label: "JUnit", terms: ["junit", "unit testing"] },
   { label: "Mockito", terms: ["mockito"] },
   { label: "Maven/Gradle", terms: ["maven", "gradle"] },
   { label: "Git", terms: ["git", "github", "gitlab", "bitbucket"] },
   { label: "Design Patterns", terms: ["design pattern", "design patterns"] },
-  { label: "DSA", terms: ["data structure", "algorithm", "dsa"] },
+  { label: "DSA", terms: ["data structure", "data structures", "algorithm", "algorithms", "dsa"] },
   { label: "System Design", terms: ["system design", "scalable", "distributed"] },
   { label: "Agile", terms: ["agile", "scrum", "jira"] },
   { label: "Observability", terms: ["logging", "monitoring", "prometheus", "grafana"] },
+];
+
+// Requirement weights — mirror AnalysisService.
+const SCORING = {
+  skill: { required: 3.0, neutral: 2.0, preferred: 1.0 },
+  keyword: { required: 1.5, neutral: 1.0, preferred: 0.5 },
+  maxUnigrams: 12,
+  maxBigrams: 6,
+  maxKeywordRequirements: 10,
+  freeMissingLimit: 5,
+};
+
+const requiredCues = [
+  "required", "require", "must", "must-have", "must have", "strong", "proficient",
+  "proficiency", "expertise", "expert", "essential", "essentials", "minimum", "at least",
+  "solid", "deep", "advanced", "mandatory", "extensive", "hands-on", "hands on",
+];
+const preferredCues = [
+  "plus", "nice to have", "nice-to-have", "preferred", "prefer", "bonus", "good to have",
+  "advantage", "desirable", "desired", "ideally", "optional", "familiarity", "exposure",
+  "a plus", "would be", "is a plus", "are a plus",
 ];
 
 const experienceGuidance = {
@@ -118,10 +147,26 @@ const experienceGuidance = {
   sixPlus: "senior Java backend engineer",
 };
 
+// Mirrors AnalysisService.STOP_WORDS on the backend.
 const genericStopWords = new Set([
   "and", "the", "for", "with", "you", "are", "will", "this", "that", "from", "have",
-  "has", "our", "your", "job", "role", "work", "team", "experience", "candidate",
-  "developer", "engineer", "software", "good", "strong", "using", "build",
+  "has", "had", "our", "your", "job", "role", "roles", "work", "working", "team", "teams",
+  "experience", "experiences", "candidate", "candidates", "developer", "developers",
+  "engineer", "engineers", "software", "good", "great", "strong", "using", "use", "used",
+  "build", "building", "built", "ability", "able", "year", "years", "month", "months",
+  "looking", "join", "joining", "responsibilities", "responsibility", "requirement",
+  "requirements", "required", "require", "must", "plus", "etc", "including", "include",
+  "includes", "such", "who", "what", "when", "where", "which", "how", "why", "they",
+  "them", "their", "its", "into", "onto", "over", "under", "about", "across", "within",
+  "would", "should", "could", "can", "may", "might", "well", "also", "more", "most",
+  "some", "any", "all", "one", "two", "three", "new", "help", "helping", "make", "making",
+  "get", "getting", "want", "need", "needs", "needed", "like", "via", "per", "out", "off",
+  "but", "not", "yet", "than", "then", "too", "very", "just", "now", "day", "days",
+  "knowledge", "understanding", "familiarity", "hands", "based", "level", "part", "full",
+  "time", "company", "companies", "product", "products", "service", "services", "system",
+  "systems", "application", "applications", "skill", "skills", "tool", "tools",
+  "technology", "technologies", "environment", "environments", "opportunity", "people",
+  "world", "every", "ensure", "deliver", "delivering", "support", "supporting",
 ]);
 
 function trackEvent(name, payload = {}) {
@@ -156,33 +201,179 @@ function hasAny(text, terms) {
   return terms.some((term) => new RegExp(`(^|[^a-z0-9+#])${escapeRegex(term)}([^a-z0-9+#]|$)`).test(text));
 }
 
-function extractKeywords(text) {
-  const words = normalize(text)
-    .replace(/[^a-z0-9+#./\s-]/g, " ")
+// Light, deterministic suffix stemmer. Must match AnalysisService.stem() exactly.
+function stem(word) {
+  let w = word;
+  if (w.length <= 3) return w;
+  if (w.endsWith("ing") && w.length - 3 >= 3) {
+    w = w.slice(0, -3);
+  } else if (w.endsWith("ed") && w.length - 2 >= 3) {
+    w = w.slice(0, -2);
+  }
+  if (w.endsWith("ies") && w.length > 4) {
+    w = w.slice(0, -3) + "y";
+  }
+  if (w.length > 3 && w.endsWith("s") && !w.endsWith("ss")) {
+    w = w.slice(0, -1);
+  }
+  return w;
+}
+
+function segments(text) {
+  return normalize(text)
+    .split(/[\n.;:!?]+/)
+    .map((part) => part.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+}
+
+function trimEdges(word) {
+  return word.replace(/^[./-]+/, "").replace(/[./-]+$/, "");
+}
+
+function contentTokens(text) {
+  return text
+    .replace(/[^a-z0-9+#./-]/g, " ")
     .split(/\s+/)
-    .filter((word) => word.length > 2 && !genericStopWords.has(word));
+    .map(trimEdges)
+    .filter((word) => word.length > 2 && !genericStopWords.has(word) && !/^[0-9]+$/.test(word));
+}
 
-  const counts = new Map();
-  words.forEach((word) => counts.set(word, (counts.get(word) || 0) + 1));
+function stemmedUnigrams(normalized) {
+  return new Set(contentTokens(normalized).map(stem));
+}
 
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 12)
-    .map(([word]) => word);
+// Bigrams built WITHIN each segment so pairs never cross a sentence boundary.
+function stemmedBigrams(segs) {
+  const set = new Set();
+  segs.forEach((segment) => {
+    const tokens = contentTokens(segment);
+    for (let i = 0; i + 1 < tokens.length; i += 1) {
+      set.add(`${stem(tokens[i])} ${stem(tokens[i + 1])}`);
+    }
+  });
+  return set;
+}
+
+function skillStemmedTerms(skill) {
+  return skill.terms.map((term) => term.split(/\s+/).map(stem).join(" "));
+}
+
+function containsCue(segment, cues) {
+  return cues.some((cue) => segment.includes(cue));
+}
+
+// Returns "required" | "preferred" | "neutral" for a requirement, based on JD sentence context.
+function classify(segs, matcher) {
+  let required = false;
+  let preferred = false;
+  segs.forEach((seg) => {
+    if (!matcher(seg)) return;
+    if (containsCue(seg, requiredCues)) required = true;
+    if (containsCue(seg, preferredCues)) preferred = true;
+  });
+  if (required) return "required";
+  if (preferred) return "preferred";
+  return "neutral";
+}
+
+function topByFrequency(freq, limit) {
+  return [...freq.entries()]
+    .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+    .slice(0, limit)
+    .map(([key]) => key);
+}
+
+function keywordRequirements(job, segs, resumeUnigrams, resumeBigrams, skillStems) {
+  const tokens = contentTokens(job);
+
+  const unigramFreq = new Map();
+  const unigramLabel = new Map();
+  tokens.forEach((token) => {
+    const s = stem(token);
+    unigramFreq.set(s, (unigramFreq.get(s) || 0) + 1);
+    if (!unigramLabel.has(s)) unigramLabel.set(s, token);
+  });
+
+  const bigramFreq = new Map();
+  const bigramLabel = new Map();
+  segs.forEach((segment) => {
+    const segTokens = contentTokens(segment);
+    for (let i = 0; i + 1 < segTokens.length; i += 1) {
+      const s = `${stem(segTokens[i])} ${stem(segTokens[i + 1])}`;
+      bigramFreq.set(s, (bigramFreq.get(s) || 0) + 1);
+      if (!bigramLabel.has(s)) bigramLabel.set(s, `${segTokens[i]} ${segTokens[i + 1]}`);
+    }
+  });
+
+  const topUnigrams = topByFrequency(unigramFreq, SCORING.maxUnigrams);
+  const topBigrams = topByFrequency(bigramFreq, SCORING.maxBigrams);
+
+  const reqs = [];
+  const used = new Set(skillStems);
+
+  topBigrams.forEach((s) => {
+    if (reqs.length >= SCORING.maxKeywordRequirements || used.has(s)) return;
+    used.add(s);
+    const label = bigramLabel.get(s);
+    const weight = SCORING.keyword[classify(segs, (seg) => seg.includes(label))];
+    reqs.push({ label, weight, covered: resumeBigrams.has(s) });
+  });
+
+  topUnigrams.forEach((s) => {
+    if (reqs.length >= SCORING.maxKeywordRequirements || used.has(s)) return;
+    used.add(s);
+    const label = unigramLabel.get(s);
+    const weight = SCORING.keyword[classify(segs, (seg) => seg.includes(label))];
+    reqs.push({ label, weight, covered: resumeUnigrams.has(s) });
+  });
+
+  return reqs;
 }
 
 function analyzeLocally(resumeText, jobText, experience) {
   const resume = normalize(resumeText);
   const job = normalize(jobText);
-  const relevantSkills = skillBank.filter((skill) => hasAny(job, skill.terms));
-  const matched = relevantSkills.filter((skill) => hasAny(resume, skill.terms)).map((skill) => skill.label);
-  const missing = relevantSkills.filter((skill) => !hasAny(resume, skill.terms)).map((skill) => skill.label);
-  const jobKeywords = extractKeywords(jobText);
-  const keywordMatches = jobKeywords.filter((keyword) => resume.includes(keyword));
-  const skillScore = relevantSkills.length ? Math.round((matched.length / relevantSkills.length) * 70) : 35;
-  const keywordScore = jobKeywords.length ? Math.round((keywordMatches.length / jobKeywords.length) * 30) : 15;
-  const score = Math.max(18, Math.min(96, skillScore + keywordScore));
-  const missingKeywords = [...missing, ...jobKeywords.filter((keyword) => !resume.includes(keyword))].slice(0, 8);
+  const segs = segments(jobText);
+  const resumeUnigrams = stemmedUnigrams(resume);
+  const resumeBigrams = stemmedBigrams(segments(resumeText));
+
+  const skillStems = new Set();
+  const skillReqs = [];
+  skillBank.forEach((skill) => {
+    skillStemmedTerms(skill).forEach((s) => skillStems.add(s));
+    if (hasAny(job, skill.terms)) {
+      const weight = SCORING.skill[classify(segs, (seg) => hasAny(seg, skill.terms))];
+      skillReqs.push({ label: skill.label, weight, covered: hasAny(resume, skill.terms) });
+    }
+  });
+
+  const keywordReqs = keywordRequirements(job, segs, resumeUnigrams, resumeBigrams, skillStems);
+
+  let totalWeight = 0;
+  let coveredWeight = 0;
+  [...skillReqs, ...keywordReqs].forEach((r) => {
+    totalWeight += r.weight;
+    if (r.covered) coveredWeight += r.weight;
+  });
+  const score = totalWeight <= 0
+    ? 0
+    : Math.max(5, Math.min(99, Math.round((coveredWeight / totalWeight) * 100)));
+
+  const matched = skillReqs.filter((r) => r.covered).map((r) => r.label);
+  const missingSkills = skillReqs.filter((r) => !r.covered).map((r) => r.label);
+
+  const missingKeywords = [...missingSkills];
+  const missingKeys = new Set(missingKeywords.map((value) => value.toLowerCase()));
+  keywordReqs.forEach((r) => {
+    if (missingKeywords.length >= 8 || r.covered) return;
+    const key = r.label.toLowerCase();
+    if (!missingKeys.has(key)) {
+      missingKeys.add(key);
+      missingKeywords.push(r.label);
+    }
+  });
+
+  const shownMissing = Math.min(missingKeywords.length, SCORING.freeMissingLimit);
   const role = experienceGuidance[experience] || experienceGuidance.oneToThree;
   const topFixes = [
     missingKeywords.length
@@ -196,7 +387,7 @@ function analyzeLocally(resumeText, jobText, experience) {
     id: null,
     saved: false,
     score,
-    scoreSummary: buildScoreSummary(score, matched, missingKeywords),
+    scoreSummary: buildScoreSummary(score, matched, shownMissing),
     matchedSkills: matched,
     missingKeywords,
     topFixes,
@@ -219,10 +410,11 @@ function analyzeLocally(resumeText, jobText, experience) {
   });
 }
 
-function buildScoreSummary(score, matched, missingKeywords) {
+function buildScoreSummary(score, matched, shownMissing) {
   if (score >= 80) return "Your resume is a strong fit for this Java role. Polish the remaining keyword gaps before applying.";
   if (score >= 60) {
-    return `Your resume matches this Java role, but you are missing ${missingKeywords.length} important keywords. Fix the top gaps before applying.`;
+    const noun = shownMissing === 1 ? "keyword" : "keywords";
+    return `Your resume matches this Java role, but you are missing ${shownMissing} important ${noun}. Fix the top gaps before applying.`;
   }
   if (!matched.length) {
     return "Your resume needs clearer Java and Spring Boot evidence for this role. Add truthful project and skill proof before applying.";
@@ -256,7 +448,7 @@ function normalizeReport(report) {
     id: report.reportId || report.id || null,
     saved: Boolean(report.reportId || report.id),
     score,
-    scoreSummary: report.scoreSummary || buildScoreSummary(score, matched, missing),
+    scoreSummary: report.scoreSummary || buildScoreSummary(score, matched, Math.min(missing.length, 5)),
     matched: matched.slice(0, 3),
     missing: missing.slice(0, 5),
     topFixes: (report.topFixes || []).slice(0, 3),
