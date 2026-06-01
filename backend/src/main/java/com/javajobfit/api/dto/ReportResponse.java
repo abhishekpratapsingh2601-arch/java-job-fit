@@ -4,8 +4,9 @@ import java.time.Instant;
 import java.util.List;
 
 public class ReportResponse {
-    private Long id;
-    private Long reportId;
+    private String id;
+    private String reportId;
+    private String publicId;
     private int score;
     private int atsScore;
     private String scoreSummary;
@@ -23,20 +24,28 @@ public class ReportResponse {
     private String experienceLevel;
     private Instant createdAt;
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public Long getReportId() {
+    public String getReportId() {
         return reportId;
     }
 
-    public void setReportId(Long reportId) {
+    public void setReportId(String reportId) {
         this.reportId = reportId;
+    }
+
+    public String getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
     }
 
     public int getScore() {

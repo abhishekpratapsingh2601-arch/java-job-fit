@@ -19,3 +19,4 @@ spring:
     enabled: true
     baseline-on-migrate: false
     clean-disabled: true
+    locations: classpath:db/migration,classpath:db/vendor/{vendor}

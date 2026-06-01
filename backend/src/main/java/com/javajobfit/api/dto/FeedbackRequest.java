@@ -5,7 +5,9 @@ import javax.validation.constraints.Email;
 import javax.validation.constraints.Size;
 
 public class FeedbackRequest {
-    private Long reportId;
+    private String reportId;
+
+    private String publicId;
 
     @Email(message = "Please enter a valid email address.")
     @Size(max = 254)
@@ -15,12 +17,20 @@ public class FeedbackRequest {
     @Size(max = 2000, message = "Feedback message must be 2000 characters or less.")
     private String message;
 
-    public Long getReportId() {
+    public String getReportId() {
         return reportId;
     }
 
-    public void setReportId(Long reportId) {
+    public void setReportId(String reportId) {
         this.reportId = reportId;
+    }
+
+    public String getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
     }
 
     public String getEmail() {

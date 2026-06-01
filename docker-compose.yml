@@ -27,7 +27,7 @@ services:
       DATABASE_DRIVER: org.postgresql.Driver
       HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
       SPRING_PROFILES_ACTIVE: prod
-      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "false"
       ALLOWED_ORIGINS: http://localhost:4173,http://127.0.0.1:4173,https://abhishekpratapsingh2601-arch.github.io
     ports:
       - "8080:8080"

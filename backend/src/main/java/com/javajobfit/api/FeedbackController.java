@@ -15,28 +15,23 @@ import org.springframework.web.bind.annotation.RestController;
 import com.javajobfit.api.dto.FeedbackRequest;
 import com.javajobfit.domain.Feedback;
 import com.javajobfit.repository.FeedbackRepository;
-import com.javajobfit.repository.ReportRepository;
-import com.javajobfit.service.ReportNotFoundException;
+import com.javajobfit.service.ReportService;
 
 @RestController
 @RequestMapping("/api/feedback")
 public class FeedbackController {
     private final FeedbackRepository feedbackRepository;
-    private final ReportRepository reportRepository;
+    private final ReportService reportService;
 
-    public FeedbackController(FeedbackRepository feedbackRepository, ReportRepository reportRepository) {
+    public FeedbackController(FeedbackRepository feedbackRepository, ReportService reportService) {
         this.feedbackRepository = feedbackRepository;
-        this.reportRepository = reportRepository;
+        this.reportService = reportService;
     }
 
     @PostMapping
     public ResponseEntity<Map<String, Long>> submitFeedback(@Valid @RequestBody FeedbackRequest request) {
-        if (request.getReportId() != null && !reportRepository.existsById(request.getReportId())) {
-            throw new ReportNotFoundException(request.getReportId());
-        }
-
         Feedback feedback = new Feedback();
-        feedback.setReportId(request.getReportId());
+        feedback.setReportId(reportService.resolveInternalReportId(request.getReportId(), request.getPublicId()));
         String email = request.getEmail();
         feedback.setEmail(email == null || email.isBlank() ? null : email.trim());
         feedback.setMessage(request.getMessage());

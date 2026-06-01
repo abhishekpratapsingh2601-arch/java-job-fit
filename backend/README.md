@@ -50,6 +50,7 @@ Schema changes are managed with Flyway migrations in:
 
 ```text
 backend/src/main/resources/db/migration
+backend/src/main/resources/db/vendor
 ```
 
 Flyway runs automatically when the Spring Boot app starts. Hibernate is set to
@@ -81,7 +82,7 @@ DATABASE_PASSWORD=postgres_password
 DATABASE_DRIVER=org.postgresql.Driver
 HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
 SPRING_PROFILES_ACTIVE=prod
-FLYWAY_BASELINE_ON_MIGRATE=true
+SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
 ALLOWED_ORIGINS=https://abhishekpratapsingh2601-arch.github.io
 PAYMENT_PROVIDER_ENABLED=false
 STRIPE_SECRET_KEY=
@@ -92,10 +93,10 @@ RAZORPAY_KEY_SECRET=
 If the frontend is served at a custom domain later, add it to `ALLOWED_ORIGINS`
 as a comma-separated value.
 
-`FLYWAY_BASELINE_ON_MIGRATE=true` lets Flyway safely adopt the existing Supabase
-schema if it was originally created by Hibernate. New empty databases will run
-all migrations from `V1`. Existing databases will be baselined and then run
-newer migrations such as the legacy raw-input-column cleanup.
+`SPRING_FLYWAY_BASELINE_ON_MIGRATE` defaults to `false`. Set it to `true` only
+for the first production migration if Flyway must adopt an existing Supabase
+schema that was originally created by Hibernate. After that first successful
+deploy, remove the variable or set it back to `false`.
 
 Payment variables are scaffolding only. Leave `PAYMENT_PROVIDER_ENABLED=false`
 until Stripe or Razorpay checkout is implemented for real.

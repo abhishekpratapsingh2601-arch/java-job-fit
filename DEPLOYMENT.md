@@ -42,7 +42,7 @@ DATABASE_PASSWORD=YOUR_SUPABASE_DATABASE_PASSWORD
 DATABASE_DRIVER=org.postgresql.Driver
 HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
 SPRING_PROFILES_ACTIVE=prod
-FLYWAY_BASELINE_ON_MIGRATE=true
+SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
 PAYMENT_PROVIDER_ENABLED=false
 ```
 
@@ -80,7 +80,7 @@ DATABASE_PASSWORD=YOUR_SUPABASE_DATABASE_PASSWORD
 DATABASE_DRIVER=org.postgresql.Driver
 HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
 SPRING_PROFILES_ACTIVE=prod
-FLYWAY_BASELINE_ON_MIGRATE=true
+SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
 ALLOWED_ORIGINS=https://abhishekpratapsingh2601-arch.github.io
 PAYMENT_PROVIDER_ENABLED=false
 ```
@@ -89,8 +89,10 @@ PAYMENT_PROVIDER_ENABLED=false
 
 Flyway runs automatically on Render startup. `SPRING_PROFILES_ACTIVE=prod`
 keeps Hibernate in schema-validation mode instead of auto-updating tables.
-`FLYWAY_BASELINE_ON_MIGRATE=true` is important for the current Supabase database
-if it already has JavaJobFit tables from the older Hibernate-managed setup.
+`SPRING_FLYWAY_BASELINE_ON_MIGRATE` defaults to `false`. Set it to `true` only
+for the first production migration if the current Supabase database already has
+JavaJobFit tables from the older Hibernate-managed setup. After the first
+successful deploy, remove it or set it back to `false`.
 
 ## Step 3: Test Backend
 

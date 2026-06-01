@@ -1,6 +1,7 @@
 package com.javajobfit.domain;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -16,6 +17,9 @@ public class Report {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "public_id", nullable = false, unique = true, columnDefinition = "UUID")
+    private UUID publicId;
 
     @Column(nullable = false)
     private String experienceLevel;
@@ -49,11 +53,22 @@ public class Report {
 
     @PrePersist
     void prePersist() {
+        if (publicId == null) {
+            publicId = UUID.randomUUID();
+        }
         createdAt = Instant.now();
     }
 
     public Long getId() {
         return id;
+    }
+
+    public UUID getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(UUID publicId) {
+        this.publicId = publicId;
     }
 
     public String getExperienceLevel() {

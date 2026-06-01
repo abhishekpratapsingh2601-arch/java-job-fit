@@ -39,7 +39,7 @@ class FeedbackControllerTest {
         mockMvc.perform(post("/api/feedback")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{"
-                                + "\"reportId\":999999,"
+                                + "\"publicId\":\"00000000-0000-0000-0000-000000000000\","
                                 + "\"email\":\"user@example.com\","
                                 + "\"message\":\"Helpful report\""
                                 + "}"))
@@ -80,12 +80,14 @@ class FeedbackControllerTest {
         report.setBulletSuggestions("Bullet");
         report.setInterviewQuestions("Question");
         report.setPrepPlan("Plan");
-        Long reportId = reportRepository.save(report).getId();
+        Report savedReport = reportRepository.save(report);
+        Long reportId = savedReport.getId();
+        String publicId = savedReport.getPublicId().toString();
 
         mockMvc.perform(post("/api/feedback")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{"
-                                + "\"reportId\":" + reportId + ","
+                                + "\"publicId\":\"" + publicId + "\","
                                 + "\"email\":\"user@example.com\","
                                 + "\"message\":\"Please add a resume download option\""
                                 + "}"))

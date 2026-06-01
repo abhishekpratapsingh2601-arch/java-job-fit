@@ -18,7 +18,9 @@ public class LeadRequest {
     @Size(max = 80)
     private String country;
 
-    private Long reportId;
+    private String reportId;
+
+    private String publicId;
 
     private boolean consent;
 
@@ -46,12 +48,20 @@ public class LeadRequest {
         this.country = country;
     }
 
-    public Long getReportId() {
+    public String getReportId() {
         return reportId;
     }
 
-    public void setReportId(Long reportId) {
+    public void setReportId(String reportId) {
         this.reportId = reportId;
+    }
+
+    public String getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
     }
 
     public boolean isConsent() {

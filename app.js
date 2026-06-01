@@ -445,8 +445,8 @@ function normalizeReport(report) {
   const plan = report.prepPlan || report.plan || [];
 
   return {
-    id: report.reportId || report.id || null,
-    saved: Boolean(report.reportId || report.id),
+    id: report.publicId || report.reportId || report.id || null,
+    saved: Boolean(report.publicId || report.reportId || report.id),
     score,
     scoreSummary: report.scoreSummary || buildScoreSummary(score, matched, Math.min(missing.length, 5)),
     matched: matched.slice(0, 3),
@@ -726,7 +726,7 @@ async function copyText(button, title, items) {
 }
 
 function openPremiumModal() {
-  trackEvent("premium_cta_clicked", { reportId: latestReport?.id || null });
+  trackEvent("premium_cta_clicked", { publicId: latestReport?.id || null });
   premiumModal.hidden = false;
 }
 
@@ -748,7 +748,7 @@ form.addEventListener("submit", async (event) => {
     const report = await buildReport();
     await finishScanProgress();
     renderResults(report);
-    trackEvent("scan_completed", { reportId: latestReport?.id || null, score: latestReport.score });
+    trackEvent("scan_completed", { publicId: latestReport?.id || null, score: latestReport.score });
   } catch (error) {
     console.warn("Scan failed", error);
     stopScanProgress();
@@ -798,7 +798,7 @@ jobInput.addEventListener("input", () => {
 });
 
 printButton.addEventListener("click", () => {
-  trackEvent("pdf_export_clicked", { reportId: latestReport?.id || null, freePreview: true });
+  trackEvent("pdf_export_clicked", { publicId: latestReport?.id || null, freePreview: true });
   window.print();
 });
 
@@ -825,14 +825,14 @@ leadForm.addEventListener("submit", async (event) => {
         email: leadEmail.value,
         experienceLevel: experienceInput.value,
         country: leadCountry.value,
-        reportId: latestReport?.id || null,
+        publicId: latestReport?.id || null,
         consent: leadConsent.checked,
       }),
     });
 
     if (!response.ok) throw new Error(`Lead request failed (${response.status})`);
     leadStatus.textContent = "Saved. We'll notify you when full report unlock is available.";
-    trackEvent("email_submitted", { reportId: latestReport?.id || null });
+    trackEvent("email_submitted", { publicId: latestReport?.id || null });
   } catch (error) {
     console.warn("Lead capture failed", error);
     leadStatus.textContent = "Email could not be saved. Please try again later.";
@@ -853,7 +853,7 @@ feedbackForm.addEventListener("submit", async (event) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        reportId: latestReport?.id || null,
+        publicId: latestReport?.id || null,
         email: feedbackEmail.value,
         message: feedbackMessage.value,
       }),
@@ -862,7 +862,7 @@ feedbackForm.addEventListener("submit", async (event) => {
     if (!response.ok) throw new Error(`Feedback request failed (${response.status})`);
     feedbackMessage.value = "";
     feedbackStatus.textContent = "Thanks. Feedback saved.";
-    trackEvent("feedback_submitted", { reportId: latestReport?.id || null });
+    trackEvent("feedback_submitted", { publicId: latestReport?.id || null });
   } catch (error) {
     console.warn("Feedback failed", error);
     feedbackStatus.textContent = "Feedback could not be saved. Please try again later.";

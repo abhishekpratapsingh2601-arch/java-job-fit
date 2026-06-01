@@ -3,6 +3,8 @@ package com.javajobfit.service;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -54,10 +56,20 @@ public class ReportService {
         return toResponse(reportRepository.save(report));
     }
 
-    public ReportResponse getReport(Long id) {
-        return reportRepository.findById(id)
+    public ReportResponse getReport(String reference) {
+        return findReportByReference(reference)
                 .map(this::toResponse)
-                .orElseThrow(() -> new ReportNotFoundException(id));
+                .orElseThrow(() -> new ReportNotFoundException(reference));
+    }
+
+    public Long resolveInternalReportId(String reportId, String publicId) {
+        String reference = publicId == null || publicId.isBlank() ? reportId : publicId;
+        if (reference == null || reference.isBlank()) {
+            return null;
+        }
+        return findReportByReference(reference)
+                .map(Report::getId)
+                .orElseThrow(() -> new ReportNotFoundException(reference));
     }
 
     private ReportResponse toResponse(Report report) {
@@ -66,10 +78,12 @@ public class ReportService {
         List<String> bulletSuggestions = split(report.getBulletSuggestions());
         List<String> interviewQuestions = split(report.getInterviewQuestions());
         List<String> prepPlan = split(report.getPrepPlan());
+        String publicId = report.getPublicId().toString();
 
         ReportResponse response = new ReportResponse();
-        response.setId(report.getId());
-        response.setReportId(report.getId());
+        response.setId(publicId);
+        response.setReportId(publicId);
+        response.setPublicId(publicId);
         response.setScore(report.getScore());
         response.setAtsScore(report.getScore());
         response.setScoreSummary(report.getScoreSummary());
@@ -87,6 +101,21 @@ public class ReportService {
         response.setExperienceLevel(report.getExperienceLevel());
         response.setCreatedAt(report.getCreatedAt());
         return response;
+    }
+
+    private Optional<Report> findReportByReference(String reference) {
+        if (reference == null || reference.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return reportRepository.findByPublicId(UUID.fromString(reference.trim()));
+        } catch (IllegalArgumentException ignored) {
+            try {
+                return reportRepository.findById(Long.valueOf(reference.trim()));
+            } catch (NumberFormatException ignoredNumber) {
+                return Optional.empty();
+            }
+        }
     }
 
     private String join(List<String> values) {

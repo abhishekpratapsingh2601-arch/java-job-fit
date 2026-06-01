@@ -36,7 +36,9 @@ class LeadControllerTest {
 
     @Test
     void leadCaptureSavesScanResultLeadWithoutRawResumeOrJobDescription() throws Exception {
-        Long reportId = reportRepository.save(buildReport()).getId();
+        Report report = reportRepository.save(buildReport());
+        Long reportId = report.getId();
+        String publicId = report.getPublicId().toString();
 
         mockMvc.perform(post("/api/leads")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -44,7 +46,7 @@ class LeadControllerTest {
                                 + "\"email\":\"lead@example.com\","
                                 + "\"experienceLevel\":\"threeToFive\","
                                 + "\"country\":\"India\","
-                                + "\"reportId\":" + reportId + ","
+                                + "\"publicId\":\"" + publicId + "\","
                                 + "\"consent\":true"
                                 + "}"))
                 .andExpect(status().isCreated())
@@ -79,8 +81,7 @@ class LeadControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{"
                                 + "\"email\":\"lead@example.com\","
-                                + "\"reportId\":999999,"
-                                + "\"source\":\"scan_result\""
+                                + "\"publicId\":\"00000000-0000-0000-0000-000000000000\""
                                 + "}"))
                 .andExpect(status().isNotFound());
     }

@@ -41,6 +41,18 @@ class ReportControllerTest {
     }
 
     @Test
+    void healthEndpointReturnsSafePayload() throws Exception {
+        mockMvc.perform(get("/api/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ok"))
+                .andExpect(jsonPath("$.service").value("JavaJobFit API"))
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.version").exists())
+                .andExpect(content().string(not(containsString("DATABASE_URL"))))
+                .andExpect(content().string(not(containsString("PASSWORD"))));
+    }
+
+    @Test
     void createReportReturnsGeneratedReportAndDoesNotExposeRawResume() throws Exception {
         String rawResume = "Private phone 9999999999 Java Spring Boot SQL";
 
@@ -52,8 +64,9 @@ class ReportControllerTest {
                                 + "\"experienceLevel\":\"oneToThree\""
                                 + "}"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").isNumber())
-                .andExpect(jsonPath("$.reportId").isNumber())
+                .andExpect(jsonPath("$.id").isString())
+                .andExpect(jsonPath("$.reportId").isString())
+                .andExpect(jsonPath("$.publicId").isString())
                 .andExpect(jsonPath("$.score").isNumber())
                 .andExpect(jsonPath("$.atsScore").isNumber())
                 .andExpect(jsonPath("$.scoreSummary").exists())
@@ -125,11 +138,13 @@ class ReportControllerTest {
                 .andExpect(status().isCreated());
 
         Long savedId = reportRepository.findAll().get(0).getId();
+        String publicId = reportRepository.findAll().get(0).getPublicId().toString();
 
-        mockMvc.perform(get("/api/reports/{id}", savedId))
+        mockMvc.perform(get("/api/reports/{id}", publicId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(savedId))
-                .andExpect(jsonPath("$.reportId").value(savedId))
+                .andExpect(jsonPath("$.id").value(publicId))
+                .andExpect(jsonPath("$.reportId").value(publicId))
+                .andExpect(jsonPath("$.publicId").value(publicId))
                 .andExpect(jsonPath("$.score").isNumber())
                 .andExpect(jsonPath("$.atsScore").isNumber())
                 .andExpect(jsonPath("$.scoreSummary").exists())
@@ -171,6 +186,6 @@ class ReportControllerTest {
     void getReportReturnsNotFoundForUnknownId() throws Exception {
         mockMvc.perform(get("/api/reports/{id}", 999999))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Report not found: 999999"));
+                .andExpect(jsonPath("$.error").value("Report not found."));
     }
 }
