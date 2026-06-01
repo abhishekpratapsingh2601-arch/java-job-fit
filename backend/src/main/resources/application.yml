@@ -1,5 +1,6 @@
+---
 server:
-  port: ${PORT:8080}
+  port: "${PORT:8080}"
   error:
     include-message: never
     include-binding-errors: never
@@ -7,24 +8,24 @@ server:
     include-exception: false
 
 app:
-  version: ${APP_VERSION:local}
+  version: "${APP_VERSION:local}"
   cors:
-    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:4173,http://127.0.0.1:4173,https://abhishekpratapsingh2601-arch.github.io}
+    allowed-origins: "${ALLOWED_ORIGINS:http://localhost:4173,http://127.0.0.1:4173,https://abhishekpratapsingh2601-arch.github.io}"
   payment:
-    provider-enabled: ${PAYMENT_PROVIDER_ENABLED:false}
-    stripe-secret-key: ${STRIPE_SECRET_KEY:}
-    razorpay-key-id: ${RAZORPAY_KEY_ID:}
-    razorpay-key-secret: ${RAZORPAY_KEY_SECRET:}
+    provider-enabled: "${PAYMENT_PROVIDER_ENABLED:false}"
+    stripe-secret-key: "${STRIPE_SECRET_KEY:}"
+    razorpay-key-id: "${RAZORPAY_KEY_ID:}"
+    razorpay-key-secret: "${RAZORPAY_KEY_SECRET:}"
 
 spring:
   datasource:
-    url: ${DATABASE_URL:jdbc:h2:file:./data/javajobfit;AUTO_SERVER=TRUE}
-    username: ${DATABASE_USERNAME:sa}
-    password: ${DATABASE_PASSWORD:}
-    driver-class-name: ${DATABASE_DRIVER:org.h2.Driver}
+    url: "${DATABASE_URL:jdbc:h2:file:./data/javajobfit;AUTO_SERVER=TRUE}"
+    username: "${DATABASE_USERNAME:sa}"
+    password: "${DATABASE_PASSWORD:}"
+    driver-class-name: "${DATABASE_DRIVER:org.h2.Driver}"
   h2:
     console:
-      enabled: ${H2_CONSOLE_ENABLED:false}
+      enabled: "${H2_CONSOLE_ENABLED:false}"
       path: /h2-console
   jpa:
     hibernate:
@@ -32,10 +33,10 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        dialect: ${HIBERNATE_DIALECT:org.hibernate.dialect.H2Dialect}
+        dialect: "${HIBERNATE_DIALECT:org.hibernate.dialect.H2Dialect}"
   flyway:
     enabled: true
-    baseline-on-migrate: ${SPRING_FLYWAY_BASELINE_ON_MIGRATE:false}
+    baseline-on-migrate: "${SPRING_FLYWAY_BASELINE_ON_MIGRATE:false}"
     baseline-version: 1
     clean-disabled: true
-    locations: classpath:db/migration,classpath:db/vendor/{vendor}
+    locations: "classpath:db/migration,classpath:db/vendor/{vendor}"
