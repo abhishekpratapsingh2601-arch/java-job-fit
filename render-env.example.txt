@@ -1,0 +1,12 @@
+SPRING_PROFILES_ACTIVE=prod
+SPRING_FLYWAY_ENABLED=true
+SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
+SPRING_JPA_HIBERNATE_DDL_AUTO=validate
+PAYMENT_PROVIDER_ENABLED=false
+SPRING_DATASOURCE_URL=your_supabase_jdbc_url
+SPRING_DATASOURCE_USERNAME=your_supabase_db_username
+SPRING_DATASOURCE_PASSWORD=your_supabase_db_password
+ALLOWED_ORIGINS=https://abhishekpratapsingh2601-arch.github.io
+
+Important note:
+Do not set SPRING_FLYWAY_BASELINE_ON_MIGRATE=true for this first deploy because the JavaJobFit app schema is empty.

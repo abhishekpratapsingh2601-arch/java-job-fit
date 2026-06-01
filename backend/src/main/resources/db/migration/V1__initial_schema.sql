@@ -3,7 +3,7 @@ CREATE TABLE reports (
   experience_level VARCHAR(255) NOT NULL,
   score INTEGER NOT NULL,
   score_summary TEXT,
-  matched_skills TEXT,
+  matched_strengths TEXT,
   missing_keywords TEXT,
   top_fixes TEXT,
   bullet_suggestions TEXT,

@@ -30,7 +30,7 @@ public class Report {
     @Column(columnDefinition = "TEXT")
     private String scoreSummary;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "matched_strengths", columnDefinition = "TEXT")
     private String matchedSkills;
 
     @Column(columnDefinition = "TEXT")

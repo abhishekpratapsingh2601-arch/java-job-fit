@@ -1,152 +1,125 @@
-# Live Deployment Plan
+# JavaJobFit Beta Deployment
 
-JavaJobFit uses two deployed pieces:
+JavaJobFit beta deploys to:
 
 - Frontend: GitHub Pages
-- Backend: Spring Boot API on Render
-- Database: Supabase Postgres free project
+- Backend: Render
+- Database: Supabase PostgreSQL
 
-This keeps hosting free for the MVP while still giving us a real running
-backend and persistent database.
+Supabase public schema currently has no JavaJobFit app tables. Keep `SPRING_FLYWAY_BASELINE_ON_MIGRATE=false` and let Flyway run the initial migrations normally.
 
-## Why This Setup
+## Deployment Order
 
-Render Free Web Service:
+1. Push latest code to GitHub.
+2. Set Render environment variables.
+3. Deploy backend first.
+4. Check `/api/health`.
+5. Check Supabase tables.
+6. Check Flyway history.
+7. Run canary privacy test.
+8. Deploy frontend.
+9. Test live site.
+10. Start beta testing with 50 users.
 
-- Can run the Spring Boot backend from `backend/Dockerfile`.
-- Supports GitHub deploys.
-- Free web services spin down after idle, so the first request after a quiet
-  period can be slow.
+## Render Environment Variables
 
-Supabase Free Postgres:
-
-- Includes 500 MB database storage.
-- Better for MVP persistence than Render Free Postgres because Render Free
-  Postgres expires after 30 days.
-- Free Supabase projects can pause after inactivity.
-
-## Step 1: Create Supabase Database
-
-1. Go to `https://supabase.com`.
-2. Create a free project named `javajobfit`.
-3. Open `Project Settings`.
-4. Open `Database`.
-5. Copy the JDBC connection string.
-
-Use environment values like:
+Use `render-env.example.txt` as the safe template:
 
 ```text
-DATABASE_URL=jdbc:postgresql://HOST:PORT/postgres?sslmode=require
-DATABASE_USERNAME=postgres
-DATABASE_PASSWORD=YOUR_SUPABASE_DATABASE_PASSWORD
-DATABASE_DRIVER=org.postgresql.Driver
-HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
 SPRING_PROFILES_ACTIVE=prod
+SPRING_FLYWAY_ENABLED=true
 SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
+SPRING_JPA_HIBERNATE_DDL_AUTO=validate
 PAYMENT_PROVIDER_ENABLED=false
+SPRING_DATASOURCE_URL=your_supabase_jdbc_url
+SPRING_DATASOURCE_USERNAME=your_supabase_db_username
+SPRING_DATASOURCE_PASSWORD=your_supabase_db_password
+ALLOWED_ORIGINS=https://abhishekpratapsingh2601-arch.github.io
 ```
 
-Do not commit the real password to GitHub.
+Do not commit real database passwords, Supabase credentials, Stripe keys, Razorpay keys, or any other secrets.
 
-## Step 2: Deploy Backend On Render
+Do not set `SPRING_FLYWAY_BASELINE_ON_MIGRATE=true` for this first deploy because the JavaJobFit app schema is empty. Use `false` so Flyway creates the initial schema from versioned migrations.
 
-1. Go to `https://render.com`.
-2. Create a free account or sign in.
-3. Click `New`.
-4. Choose `Web Service`.
-5. Connect the GitHub repository:
+## Backend Deploy
+
+Render settings:
 
 ```text
-abhishekpratapsingh2601-arch/java-job-fit
-```
-
-6. Use these settings:
-
-```text
-Name: javajobfit-backend
 Runtime: Docker
 Root Directory: backend
 Dockerfile Path: Dockerfile
 Instance Type: Free
 ```
 
-7. Add environment variables:
+Flyway runs automatically on backend startup before JPA validation. Production uses `ddl-auto: validate`, so Hibernate validates the Flyway-created schema instead of creating or changing tables.
+
+After deployment, open:
 
 ```text
-PORT=8080
-DATABASE_URL=jdbc:postgresql://HOST:PORT/postgres?sslmode=require
-DATABASE_USERNAME=postgres
-DATABASE_PASSWORD=YOUR_SUPABASE_DATABASE_PASSWORD
-DATABASE_DRIVER=org.postgresql.Driver
-HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
-SPRING_PROFILES_ACTIVE=prod
-SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
-ALLOWED_ORIGINS=https://abhishekpratapsingh2601-arch.github.io
-PAYMENT_PROVIDER_ENABLED=false
+https://java-job-fit.onrender.com/api/health
 ```
 
-8. Deploy.
-
-Flyway runs automatically on Render startup. `SPRING_PROFILES_ACTIVE=prod`
-keeps Hibernate in schema-validation mode instead of auto-updating tables.
-`SPRING_FLYWAY_BASELINE_ON_MIGRATE` defaults to `false`. Set it to `true` only
-for the first production migration if the current Supabase database already has
-JavaJobFit tables from the older Hibernate-managed setup. After the first
-successful deploy, remove it or set it back to `false`.
-
-## Step 3: Test Backend
-
-After Render gives a public URL, test:
-
-```text
-https://YOUR_RENDER_BACKEND_URL/api/health
-```
-
-Expected response:
+Expected safe shape:
 
 ```json
-{"status":"ok"}
+{
+  "status": "ok",
+  "service": "JavaJobFit API",
+  "timestamp": "...",
+  "version": "..."
+}
 ```
 
-## Step 4: Connect Frontend To Backend
+The health endpoint must not expose secrets, database URLs, environment variables, stack traces, or Supabase credentials.
 
-Edit `config.js`:
+## Supabase Checks
 
-```js
-window.JAVAJOBFIT_API_BASE = "https://YOUR_RENDER_BACKEND_URL";
-```
+Run the read-only checks in `supabase-checks.sql` from the Supabase SQL Editor after backend startup.
 
-Commit and push:
+Confirm:
 
-```bash
-git add config.js
-git commit -m "chore: connect frontend to live backend"
-git push
-```
+- `reports`, `leads`, `feedback`, and `flyway_schema_history` exist.
+- Flyway migrations are marked successful.
+- `reports.public_id` exists and is unique.
+- No raw resume/JD columns exist.
+- Canary strings such as `DO_NOT_STORE` are not found after a test scan.
 
-After GitHub Pages updates, the live site will use the backend API.
+## Canary Privacy Test
 
-## Live Test Checklist
-
-- Open the GitHub Pages frontend.
-- Click `Try sample resume`.
-- Click `Analyze my Java resume`.
-- Confirm report appears.
-- Submit the lead email form with a test email.
-- Submit feedback.
-- Check Supabase table data for `reports`, `leads`, and `feedback`.
-
-## Database Migrations
-
-Migration files live in:
+Use the live frontend with a test resume and job description containing a unique marker, for example:
 
 ```text
-backend/src/main/resources/db/migration
+DO_NOT_STORE_BETA_CANARY_20260601
 ```
 
-Render does not need a separate migration job for this MVP. The backend runs
-Flyway migrations before JPA starts. If migration fails, the app should fail to
-start instead of silently changing schema through Hibernate.
+After the scan, run the canary query in `supabase-checks.sql`. It should return zero rows. Also check Render logs and confirm the marker was not logged.
 
-Privacy rule: migrations must not add raw resume, raw job description, analytics
-payload, or uploaded file storage columns.
+## Frontend Deploy
+
+GitHub Pages serves the frontend from the repository. `config.js` must point to:
+
+```js
+window.JAVAJOBFIT_API_BASE = "https://java-job-fit.onrender.com";
+```
+
+After GitHub Pages updates, test:
+
+- Page loads.
+- `Try sample resume` works.
+- `Analyze my Java resume` works.
+- Score and top fixes appear.
+- Free preview stays limited.
+- Premium sections stay locked.
+- Email capture works.
+- Feedback works.
+- Copy buttons work.
+- Export report works.
+- Privacy, Terms, and Contact links work.
+- Mobile view has no horizontal scroll.
+
+## Privacy Rules
+
+Do not store raw resume text, raw job description text, uploaded files, analytics payloads containing raw input, or stack traces containing user input.
+
+Only generated report output, optional lead email data, optional feedback, experience level, country, report ID/public ID, consent, source, timestamps, and safe metadata may be stored.
