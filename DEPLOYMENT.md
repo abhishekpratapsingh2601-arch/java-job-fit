@@ -8,6 +8,33 @@ JavaJobFit beta deploys to:
 
 Supabase public schema currently has no JavaJobFit app tables. Keep `SPRING_FLYWAY_BASELINE_ON_MIGRATE=false` and let Flyway run the initial migrations normally.
 
+## Supabase Production Database
+
+Use the Supabase direct PostgreSQL connection for the Render backend and Flyway migrations. Do not use the transaction pooler for migrations.
+
+Use:
+
+- Direct host: `db.YOUR_PROJECT_REF.supabase.co`
+- Direct port: `5432`
+- SSL required in the JDBC URL
+
+Example JDBC URL format:
+
+```text
+jdbc:postgresql://db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require
+```
+
+Do not use the Supabase transaction pooler port `6543` for Flyway migrations. Flyway needs a direct database connection so it can create and validate `flyway_schema_history` safely.
+
+Because the JavaJobFit schema is empty for the first production deploy, keep:
+
+```text
+SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
+SPRING_JPA_HIBERNATE_DDL_AUTO=validate
+```
+
+Production config pins the PostgreSQL JDBC driver and Hibernate dialect in `application-prod.yml`, so do not hard-code database credentials in the repo.
+
 ## Deployment Order
 
 1. Push latest code to GitHub.
@@ -31,7 +58,7 @@ SPRING_FLYWAY_ENABLED=true
 SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
 SPRING_JPA_HIBERNATE_DDL_AUTO=validate
 PAYMENT_PROVIDER_ENABLED=false
-SPRING_DATASOURCE_URL=your_supabase_jdbc_url
+SPRING_DATASOURCE_URL=jdbc:postgresql://db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require
 SPRING_DATASOURCE_USERNAME=your_supabase_db_username
 SPRING_DATASOURCE_PASSWORD=your_supabase_db_password
 ALLOWED_ORIGINS=https://abhishekpratapsingh2601-arch.github.io
@@ -40,6 +67,8 @@ ALLOWED_ORIGINS=https://abhishekpratapsingh2601-arch.github.io
 Do not commit real database passwords, Supabase credentials, Stripe keys, Razorpay keys, or any other secrets.
 
 Do not set `SPRING_FLYWAY_BASELINE_ON_MIGRATE=true` for this first deploy because the JavaJobFit app schema is empty. Use `false` so Flyway creates the initial schema from versioned migrations.
+
+Render should use the Supabase direct PostgreSQL URL on port `5432`, not the transaction pooler URL on port `6543`.
 
 ## Backend Deploy
 

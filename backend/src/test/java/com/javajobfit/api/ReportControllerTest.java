@@ -160,6 +160,10 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.premiumAvailable").value(true))
                 .andExpect(jsonPath("$.experienceLevel").value("oneToThree"))
                 .andExpect(jsonPath("$.createdAt").exists());
+
+        mockMvc.perform(get("/api/reports/{id}", savedId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Report not found."));
     }
 
     @Test
@@ -185,6 +189,13 @@ class ReportControllerTest {
     @Test
     void getReportReturnsNotFoundForUnknownId() throws Exception {
         mockMvc.perform(get("/api/reports/{id}", 999999))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Report not found."));
+    }
+
+    @Test
+    void getReportReturnsNotFoundForInvalidPublicId() throws Exception {
+        mockMvc.perform(get("/api/reports/{id}", "not-a-public-uuid"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Report not found."));
     }

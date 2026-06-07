@@ -69,10 +69,26 @@ class LeadControllerTest {
         mockMvc.perform(post("/api/leads")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{"
-                                + "\"email\":\"not-an-email\""
+                                + "\"email\":\"not-an-email\","
+                                + "\"consent\":true"
                                 + "}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.email").value("Please enter a valid email address."));
+    }
+
+    @Test
+    void leadCaptureRejectsMissingConsent() throws Exception {
+        mockMvc.perform(post("/api/leads")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"email\":\"lead@example.com\","
+                                + "\"consent\":false"
+                                + "}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.consent")
+                        .value("Please agree to receive JavaJobFit product updates before saving your email."));
+
+        org.assertj.core.api.Assertions.assertThat(leadRepository.findAll()).isEmpty();
     }
 
     @Test
@@ -81,7 +97,8 @@ class LeadControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{"
                                 + "\"email\":\"lead@example.com\","
-                                + "\"publicId\":\"00000000-0000-0000-0000-000000000000\""
+                                + "\"publicId\":\"00000000-0000-0000-0000-000000000000\","
+                                + "\"consent\":true"
                                 + "}"))
                 .andExpect(status().isNotFound());
     }

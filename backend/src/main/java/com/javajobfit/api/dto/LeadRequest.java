@@ -1,5 +1,6 @@
 package com.javajobfit.api.dto;
 
+import javax.validation.constraints.AssertTrue;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
@@ -22,6 +23,7 @@ public class LeadRequest {
 
     private String publicId;
 
+    @AssertTrue(message = "Please agree to receive JavaJobFit product updates before saving your email.")
     private boolean consent;
 
     public String getEmail() {

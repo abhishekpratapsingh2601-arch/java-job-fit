@@ -34,10 +34,12 @@ const leadEmail = document.querySelector("#lead-email");
 const leadCountry = document.querySelector("#lead-country");
 const leadConsent = document.querySelector("#lead-consent");
 const leadStatus = document.querySelector("#lead-status");
+const leadSubmitButton = leadForm?.querySelector('button[type="submit"]');
 const feedbackForm = document.querySelector("#feedback-form");
 const feedbackEmail = document.querySelector("#feedback-email");
 const feedbackMessage = document.querySelector("#feedback-message");
 const feedbackStatus = document.querySelector("#feedback-status");
+const feedbackSubmitButton = feedbackForm?.querySelector('button[type="submit"]');
 const premiumModal = document.querySelector("#premium-modal");
 const premiumClose = document.querySelector("#premium-close");
 const joinEarlyAccess = document.querySelector("#join-early-access");
@@ -856,10 +858,21 @@ leadForm.addEventListener("submit", async (event) => {
     return;
   }
 
+  if (!leadConsent.checked) {
+    leadStatus.textContent = "Please agree to receive JavaJobFit product updates before saving your email.";
+    return;
+  }
+
   if (!apiBase) {
     leadStatus.textContent = "Saved locally for this session. Backend lead capture is not configured.";
     trackEvent("email_submitted", { localOnly: true });
     return;
+  }
+
+  const originalLabel = leadSubmitButton?.textContent || "";
+  if (leadSubmitButton) {
+    leadSubmitButton.disabled = true;
+    leadSubmitButton.textContent = "Saving...";
   }
 
   try {
@@ -881,6 +894,11 @@ leadForm.addEventListener("submit", async (event) => {
   } catch (error) {
     console.warn("Lead capture failed", error);
     leadStatus.textContent = "Email could not be saved. Please try again later.";
+  } finally {
+    if (leadSubmitButton) {
+      leadSubmitButton.disabled = false;
+      leadSubmitButton.textContent = originalLabel;
+    }
   }
 });
 
@@ -891,6 +909,12 @@ feedbackForm.addEventListener("submit", async (event) => {
   if (!apiBase) {
     feedbackStatus.textContent = "Backend is not configured yet. Feedback will work after API deployment.";
     return;
+  }
+
+  const originalLabel = feedbackSubmitButton?.textContent || "";
+  if (feedbackSubmitButton) {
+    feedbackSubmitButton.disabled = true;
+    feedbackSubmitButton.textContent = "Sending...";
   }
 
   try {
@@ -911,6 +935,11 @@ feedbackForm.addEventListener("submit", async (event) => {
   } catch (error) {
     console.warn("Feedback failed", error);
     feedbackStatus.textContent = "Feedback could not be saved. Please try again later.";
+  } finally {
+    if (feedbackSubmitButton) {
+      feedbackSubmitButton.disabled = false;
+      feedbackSubmitButton.textContent = originalLabel;
+    }
   }
 });
 

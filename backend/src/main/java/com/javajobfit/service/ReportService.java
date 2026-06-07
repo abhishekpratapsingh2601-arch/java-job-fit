@@ -57,7 +57,7 @@ public class ReportService {
     }
 
     public ReportResponse getReport(String reference) {
-        return findReportByReference(reference)
+        return findReportByPublicId(reference)
                 .map(this::toResponse)
                 .orElseThrow(() -> new ReportNotFoundException(reference));
     }
@@ -67,7 +67,7 @@ public class ReportService {
         if (reference == null || reference.isBlank()) {
             return null;
         }
-        return findReportByReference(reference)
+        return findReportByPublicId(reference)
                 .map(Report::getId)
                 .orElseThrow(() -> new ReportNotFoundException(reference));
     }
@@ -103,18 +103,14 @@ public class ReportService {
         return response;
     }
 
-    private Optional<Report> findReportByReference(String reference) {
+    private Optional<Report> findReportByPublicId(String reference) {
         if (reference == null || reference.isBlank()) {
             return Optional.empty();
         }
         try {
             return reportRepository.findByPublicId(UUID.fromString(reference.trim()));
         } catch (IllegalArgumentException ignored) {
-            try {
-                return reportRepository.findById(Long.valueOf(reference.trim()));
-            } catch (NumberFormatException ignoredNumber) {
-                return Optional.empty();
-            }
+            return Optional.empty();
         }
     }
 
