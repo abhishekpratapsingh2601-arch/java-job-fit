@@ -79,7 +79,7 @@ Run the read-only checks in `supabase-checks.sql` from the Supabase SQL Editor a
 
 Confirm:
 
-- `reports`, `leads`, `feedback`, and `flyway_schema_history` exist.
+- `reports`, `leads`, `feedback`, `events`, and `flyway_schema_history` exist.
 - Flyway migrations are marked successful.
 - `reports.public_id` exists and is unique.
 - No raw resume/JD columns exist.

@@ -53,6 +53,11 @@ let progressPercent = 0;
 const apiBase = (window.JAVAJOBFIT_API_BASE || "").replace(/\/$/, "");
 const defaultAnalyzeLabel = "Analyze my Java resume";
 const backendTimeoutMs = 18000;
+const urlParams = new URLSearchParams(window.location.search);
+const pageSource = urlParams.get("source") || urlParams.get("ref") || "";
+const utmSource = urlParams.get("utm_source") || "";
+const utmMedium = urlParams.get("utm_medium") || "";
+const utmCampaign = urlParams.get("utm_campaign") || "";
 
 const sampleResume = `Rahul Sharma
 Java Backend Developer | 2.5 years experience
@@ -170,23 +175,64 @@ const genericStopWords = new Set([
 ]);
 
 function trackEvent(name, payload = {}) {
+  const safePayload = {
+    pagePath: window.location.pathname,
+    reportPublicId: payload.publicId || payload.reportPublicId || null,
+    experienceLevel: payload.experienceLevel || latestReport?.experienceLevel || null,
+    country: payload.country || null,
+    source: payload.source || pageSource || "frontend",
+    utmSource,
+    utmMedium,
+    utmCampaign,
+    timestamp: new Date().toISOString(),
+    viewport: `${window.innerWidth}x${window.innerHeight}`,
+    reason: payload.reason || null,
+    score: typeof payload.score === "number" ? payload.score : null,
+    label: payload.label || payload.title || null,
+    localOnly: Boolean(payload.localOnly),
+  };
   const event = {
     name,
-    payload: {
-      ...payload,
-      hasReport: Boolean(latestReport),
-      timestamp: new Date().toISOString(),
-    },
+    payload: safePayload,
   };
 
   if (window.JAVAJOBFIT_TRACK_EVENT) {
     window.JAVAJOBFIT_TRACK_EVENT(event.name, event.payload);
-    return;
   }
 
   if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
     console.info("[JavaJobFit event]", event.name, event.payload);
   }
+
+  if (!apiBase) {
+    return;
+  }
+
+  const body = JSON.stringify({
+    eventName: event.name,
+    pagePath: event.payload.pagePath,
+    reportPublicId: event.payload.reportPublicId,
+    experienceLevel: event.payload.experienceLevel,
+    country: event.payload.country,
+    source: event.payload.source,
+    utmSource: event.payload.utmSource,
+    utmMedium: event.payload.utmMedium,
+    utmCampaign: event.payload.utmCampaign,
+  });
+
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon(`${apiBase}/api/events`, new Blob([body], { type: "application/json" }));
+    return;
+  }
+
+  fetch(`${apiBase}/api/events`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+    keepalive: true,
+  }).catch(() => {
+    // Analytics should never interrupt the resume scan.
+  });
 }
 
 function normalize(text) {
@@ -425,14 +471,13 @@ function buildScoreSummary(score, matched, shownMissing) {
 function defaultLockedSections() {
   return [
     "Full keyword analysis",
-    "10+ resume bullet upgrades",
+    "10+ Java resume bullet upgrades",
     "Keyword placement suggestions",
-    "Tailored Java/Spring Boot resume summary",
-    "Full Java interview question set",
+    "Full Java/Spring Boot interview questions",
     "Full 7-day prep plan",
     "Cover letter draft",
     "LinkedIn headline/About rewrite",
-    "Export full PDF/DOCX report",
+    "Export full report",
   ];
 }
 
@@ -484,7 +529,7 @@ function renderLockedSections(sections) {
     badge.className = "lock-badge";
     badge.textContent = "Locked";
     heading.textContent = section;
-    text.textContent = "Unlock full Java resume optimization to access this section.";
+    text.textContent = "Unlock the full JavaJobFit Pro Report to access this section.";
     button.type = "button";
     button.className = "secondary-action premium-cta";
     button.textContent = "Join early access";
@@ -798,7 +843,7 @@ jobInput.addEventListener("input", () => {
 });
 
 printButton.addEventListener("click", () => {
-  trackEvent("pdf_export_clicked", { publicId: latestReport?.id || null, freePreview: true });
+  trackEvent("export_report_clicked", { publicId: latestReport?.id || null, freePreview: true });
   window.print();
 });
 
@@ -832,7 +877,7 @@ leadForm.addEventListener("submit", async (event) => {
 
     if (!response.ok) throw new Error(`Lead request failed (${response.status})`);
     leadStatus.textContent = "Saved. We'll notify you when full report unlock is available.";
-    trackEvent("email_submitted", { publicId: latestReport?.id || null });
+    trackEvent("email_submitted", { publicId: latestReport?.id || null, country: leadCountry.value });
   } catch (error) {
     console.warn("Lead capture failed", error);
     leadStatus.textContent = "Email could not be saved. Please try again later.";
@@ -897,3 +942,16 @@ copyQuestionsButton.addEventListener("click", () => {
 copyPlanButton.addEventListener("click", () => {
   copyText(copyPlanButton, "7-day prep plan preview", latestReport?.plan || []);
 });
+
+trackEvent("page_view", { experienceLevel: experienceInput.value });
+
+const pricingSection = document.querySelector(".pricing-section");
+if (pricingSection && "IntersectionObserver" in window) {
+  const pricingObserver = new IntersectionObserver((entries) => {
+    if (entries.some((entry) => entry.isIntersecting)) {
+      trackEvent("pricing_viewed");
+      pricingObserver.disconnect();
+    }
+  }, { threshold: 0.35 });
+  pricingObserver.observe(pricingSection);
+}

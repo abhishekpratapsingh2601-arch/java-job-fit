@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Java Developer Resume Checker - JavaJobFit</title>
+    <meta
+      name="description"
+      content="Check whether your Java developer resume matches a target job description. Find missing Java, Spring Boot, SQL, testing, and backend keywords."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=20260601-profit1" />
+  </head>
+  <body>
+    <main class="legal-page">
+      <article class="legal-card">
+        <p class="eyebrow">JavaJobFit Resource</p>
+        <h1>Java Developer Resume Checker</h1>
+        <p>
+          A good Java resume should make your backend experience easy to scan. Recruiters and hiring
+          teams usually look for Java, Spring Boot, REST APIs, databases, testing, version control,
+          deployment, and evidence that you can work on production software.
+        </p>
+        <a class="page-cta" href="index.html">Analyze my Java resume</a>
+
+        <h2>What to Check Before Applying</h2>
+        <ul>
+          <li>Does your resume mention the exact Java and Spring skills from the job description?</li>
+          <li>Do your bullets show what you built, improved, tested, or supported?</li>
+          <li>Do you include backend tools such as SQL, JPA/Hibernate, JUnit, Mockito, Maven, Git, Docker, or CI/CD when relevant?</li>
+          <li>Can you explain every keyword you add in an interview?</li>
+        </ul>
+
+        <h2>Simple Java Resume Tip</h2>
+        <p>
+          Replace generic lines like "worked on backend development" with evidence: "Built Spring Boot
+          REST APIs with validation, JPA repositories, SQL persistence, and unit tests." Keep it truthful
+          and specific to your actual work.
+        </p>
+
+        <h2>Privacy Note</h2>
+        <p>Raw resume text and job descriptions are not stored.</p>
+      </article>
+      <footer class="site-footer" aria-label="Legal links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms</a>
+        <a href="contact.html">Contact</a>
+      </footer>
+    </main>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const body = JSON.stringify({
+          eventName: "page_view",
+          pagePath: window.location.pathname,
+          source: params.get("source") || "seo_page",
+          utmSource: params.get("utm_source") || "",
+          utmMedium: params.get("utm_medium") || "",
+          utmCampaign: params.get("utm_campaign") || ""
+        });
+        const url = "https://java-job-fit.onrender.com/api/events";
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
+        } else {
+          fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+        }
+      })();
+    </script>
+  </body>
+</html>

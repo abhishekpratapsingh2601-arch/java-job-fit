@@ -1,6 +1,6 @@
 # JavaJobFit Backend
 
-Spring Boot API for JavaJobFit reports, lead capture, and feedback.
+Spring Boot API for JavaJobFit reports, lead capture, feedback, and safe events.
 
 ## Endpoints
 
@@ -10,6 +10,7 @@ POST /api/reports
 GET  /api/reports/{id}
 POST /api/leads
 POST /api/feedback
+POST /api/events
 ```
 
 `POST /api/reports` processes raw resume text and raw job descriptions, but the
@@ -106,7 +107,8 @@ until Stripe or Razorpay checkout is implemented for real.
 Migrations must never add columns for raw resume text, raw job description text,
 or uploaded files. The `reports` table stores generated report output only. The
 `leads` table stores email lead metadata only. The `feedback` table stores
-feedback messages only.
+feedback messages only. The `events` table stores safe event metadata only,
+never raw resume text, raw job description text, or generated report text.
 
 ## Free Deployment Recommendation
 

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Java Interview Questions from Job Description - JavaJobFit</title>
+    <meta
+      name="description"
+      content="Turn a Java or Spring Boot job description into focused interview preparation topics, from REST APIs and SQL to testing and system design."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=20260601-profit1" />
+  </head>
+  <body>
+    <main class="legal-page">
+      <article class="legal-card">
+        <p class="eyebrow">JavaJobFit Resource</p>
+        <h1>Java Interview Questions from Job Description</h1>
+        <p>
+          A job description is a useful interview prep map. If a role mentions Spring Boot, REST APIs,
+          Hibernate, SQL, Kafka, Docker, or cloud, prepare examples and questions around those exact areas.
+        </p>
+        <a class="page-cta" href="index.html">Analyze my Java resume</a>
+
+        <h2>Question Areas to Prepare</h2>
+        <ul>
+          <li>Core Java: collections, exceptions, streams, concurrency, and OOP tradeoffs</li>
+          <li>Spring Boot: auto-configuration, dependency injection, controllers, services, repositories</li>
+          <li>REST APIs: status codes, validation, error handling, pagination, idempotency</li>
+          <li>Data: SQL joins, indexes, transactions, JPA mappings, N+1 query problems</li>
+          <li>Testing and delivery: JUnit, Mockito, Docker, CI/CD, logs, and production debugging</li>
+        </ul>
+
+        <h2>Use Your Resume as Proof</h2>
+        <p>
+          For every important keyword in the job description, prepare one truthful project or work story.
+          JavaJobFit helps surface missing topics so your resume update and interview prep match the same role.
+        </p>
+
+        <h2>Privacy Note</h2>
+        <p>Raw resume text and job descriptions are not stored.</p>
+      </article>
+      <footer class="site-footer" aria-label="Legal links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms</a>
+        <a href="contact.html">Contact</a>
+      </footer>
+    </main>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const body = JSON.stringify({
+          eventName: "page_view",
+          pagePath: window.location.pathname,
+          source: params.get("source") || "seo_page",
+          utmSource: params.get("utm_source") || "",
+          utmMedium: params.get("utm_medium") || "",
+          utmCampaign: params.get("utm_campaign") || ""
+        });
+        const url = "https://java-job-fit.onrender.com/api/events";
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
+        } else {
+          fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+        }
+      })();
+    </script>
+  </body>
+</html>

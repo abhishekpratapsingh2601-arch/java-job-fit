@@ -36,4 +36,10 @@ union all
 
 select 'feedback' as table_name, id::text
 from feedback f
-where row_to_json(f)::text ilike '%DO_NOT_STORE%';
+where row_to_json(f)::text ilike '%DO_NOT_STORE%'
+
+union all
+
+select 'events' as table_name, id::text
+from events e
+where row_to_json(e)::text ilike '%DO_NOT_STORE%';

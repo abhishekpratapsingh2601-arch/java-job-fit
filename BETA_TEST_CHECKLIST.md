@@ -35,6 +35,35 @@
 - 3+ feedback messages
 - 3+ premium CTA clicks
 
+## Profitability target
+
+- 100 visitors
+- 30+ completed scans
+- 10+ email captures
+- 5+ premium CTA clicks
+
+## Payment trigger
+
+Only add real Razorpay/Stripe when:
+
+- 100+ visitors
+- 30+ completed scans
+- 5-10 premium CTA clicks
+
+## Pricing
+
+- India pricing: ₹89 one-time Pro Report
+- International pricing: $9.99 one-time Pro Report
+
+## Paid ads rule
+
+Do not run paid ads until:
+
+- production app is stable
+- analytics/events work
+- canary privacy test passes
+- at least 50 real users tested it
+
 ## Beta sharing message
 
 I built JavaJobFit, a free ATS-style resume checker for Java/Spring Boot developers.

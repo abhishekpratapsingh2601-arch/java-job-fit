@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spring Boot Resume Keywords - JavaJobFit</title>
+    <meta
+      name="description"
+      content="Find Spring Boot resume keywords for Java backend roles, including REST APIs, JPA, validation, testing, microservices, Docker, and CI/CD."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=20260601-profit1" />
+  </head>
+  <body>
+    <main class="legal-page">
+      <article class="legal-card">
+        <p class="eyebrow">JavaJobFit Resource</p>
+        <h1>Spring Boot Resume Keywords</h1>
+        <p>
+          Spring Boot job descriptions often ask for more than the framework name. They may expect REST API
+          design, layered architecture, validation, exception handling, JPA/Hibernate, SQL, tests, and
+          deployment familiarity.
+        </p>
+        <a class="page-cta" href="index.html">Analyze my Java resume</a>
+
+        <h2>Useful Keywords to Consider</h2>
+        <ul>
+          <li>Spring Boot, Spring MVC, Spring Data JPA, Hibernate, REST APIs</li>
+          <li>DTOs, validation, exception handling, pagination, Swagger/OpenAPI</li>
+          <li>JUnit, Mockito, integration testing, Maven or Gradle</li>
+          <li>Docker, CI/CD, Git, logging, monitoring, production debugging</li>
+          <li>Microservices, Kafka, Redis, AWS, Kubernetes, if you have real experience</li>
+        </ul>
+
+        <h2>Avoid Keyword Stuffing</h2>
+        <p>
+          Add keywords only when you can back them up with a project, work example, or learning proof.
+          A concise evidence-based bullet is stronger than a long skills list.
+        </p>
+
+        <h2>Privacy Note</h2>
+        <p>Raw resume text and job descriptions are not stored.</p>
+      </article>
+      <footer class="site-footer" aria-label="Legal links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms</a>
+        <a href="contact.html">Contact</a>
+      </footer>
+    </main>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const body = JSON.stringify({
+          eventName: "page_view",
+          pagePath: window.location.pathname,
+          source: params.get("source") || "seo_page",
+          utmSource: params.get("utm_source") || "",
+          utmMedium: params.get("utm_medium") || "",
+          utmCampaign: params.get("utm_campaign") || ""
+        });
+        const url = "https://java-job-fit.onrender.com/api/events";
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
+        } else {
+          fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+        }
+      })();
+    </script>
+  </body>
+</html>

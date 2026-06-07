@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://abhishekpratapsingh2601-arch.github.io/java-job-fit/sitemap.xml

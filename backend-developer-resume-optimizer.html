@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Backend Developer Resume Optimizer - JavaJobFit</title>
+    <meta
+      name="description"
+      content="Optimize a backend developer resume for Java and Spring Boot roles with clearer API, database, testing, cloud, and production support evidence."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=20260601-profit1" />
+  </head>
+  <body>
+    <main class="legal-page">
+      <article class="legal-card">
+        <p class="eyebrow">JavaJobFit Resource</p>
+        <h1>Backend Developer Resume Optimizer</h1>
+        <p>
+          Backend resumes work best when they show clear ownership: APIs designed, data models improved,
+          tests added, incidents debugged, releases supported, or performance improved. For Java roles,
+          Spring Boot and database evidence should be easy to find.
+        </p>
+        <a class="page-cta" href="index.html">Analyze my Java resume</a>
+
+        <h2>Backend Signals Hiring Teams Notice</h2>
+        <ul>
+          <li>REST API design, validation, error handling, versioning, and documentation</li>
+          <li>SQL, indexes, JPA/Hibernate, transactions, and performance troubleshooting</li>
+          <li>Testing strategy with JUnit, Mockito, integration tests, and code reviews</li>
+          <li>Deployment, Docker, CI/CD, logging, monitoring, and production support</li>
+        </ul>
+
+        <h2>Make Impact Easier to Scan</h2>
+        <p>
+          Use one bullet per outcome where possible: what you changed, what tools you used, and what
+          improved. Numbers help when truthful, but clear technical ownership is valuable too.
+        </p>
+
+        <h2>Privacy Note</h2>
+        <p>Raw resume text and job descriptions are not stored.</p>
+      </article>
+      <footer class="site-footer" aria-label="Legal links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms</a>
+        <a href="contact.html">Contact</a>
+      </footer>
+    </main>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const body = JSON.stringify({
+          eventName: "page_view",
+          pagePath: window.location.pathname,
+          source: params.get("source") || "seo_page",
+          utmSource: params.get("utm_source") || "",
+          utmMedium: params.get("utm_medium") || "",
+          utmCampaign: params.get("utm_campaign") || ""
+        });
+        const url = "https://java-job-fit.onrender.com/api/events";
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
+        } else {
+          fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+        }
+      })();
+    </script>
+  </body>
+</html>
