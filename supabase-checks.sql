@@ -10,7 +10,9 @@ from flyway_schema_history
 order by installed_rank;
 
 -- Check for suspicious raw/private columns
-select table_name, column_name
+select
+  table_name,
+  column_name
 from information_schema.columns
 where table_schema = 'public'
 and (
