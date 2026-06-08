@@ -40,6 +40,9 @@ const feedbackEmail = document.querySelector("#feedback-email");
 const feedbackMessage = document.querySelector("#feedback-message");
 const feedbackStatus = document.querySelector("#feedback-status");
 const feedbackSubmitButton = feedbackForm?.querySelector('button[type="submit"]');
+const usefulnessStatus = document.querySelector("#usefulness-status");
+const usefulYes = document.querySelector("#useful-yes");
+const usefulNo = document.querySelector("#useful-no");
 const premiumModal = document.querySelector("#premium-modal");
 const premiumClose = document.querySelector("#premium-close");
 const joinEarlyAccess = document.querySelector("#join-early-access");
@@ -737,6 +740,7 @@ function resetScanState() {
   formError.textContent = "";
   feedbackStatus.textContent = "";
   leadStatus.textContent = "";
+  usefulnessStatus.textContent = "";
   stopScanProgress();
   clearRenderedResults();
   results.hidden = true;
@@ -774,6 +778,43 @@ async function copyText(button, title, items) {
     setTimeout(() => {
       button.textContent = original;
     }, 1200);
+  }
+}
+
+async function submitUsefulnessFeedback(answer) {
+  usefulnessStatus.textContent = "";
+
+  if (!apiBase) {
+    usefulnessStatus.textContent = "Thanks. Your answer is noted for this session.";
+    trackEvent("feedback_submitted", { label: `usefulness_${answer}`, localOnly: true });
+    return;
+  }
+
+  [usefulYes, usefulNo].forEach((button) => {
+    button.disabled = true;
+  });
+
+  try {
+    const response = await fetch(`${apiBase}/api/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        publicId: latestReport?.id || null,
+        email: "",
+        message: `Usefulness prompt: ${answer}. Score: ${latestReport?.score ?? "unknown"}.`,
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Usefulness feedback failed (${response.status})`);
+    usefulnessStatus.textContent = "Thanks. This helps us improve the beta.";
+    trackEvent("feedback_submitted", { publicId: latestReport?.id || null, label: `usefulness_${answer}` });
+  } catch (error) {
+    console.warn("Usefulness feedback failed", error);
+    usefulnessStatus.textContent = "Could not save that answer. You can still use the feedback box below.";
+  } finally {
+    [usefulYes, usefulNo].forEach((button) => {
+      button.disabled = false;
+    });
   }
 }
 
@@ -946,6 +987,14 @@ feedbackForm.addEventListener("submit", async (event) => {
       feedbackSubmitButton.textContent = originalLabel;
     }
   }
+});
+
+usefulYes.addEventListener("click", () => {
+  submitUsefulnessFeedback("yes");
+});
+
+usefulNo.addEventListener("click", () => {
+  submitUsefulnessFeedback("no");
 });
 
 document.addEventListener("click", (event) => {

@@ -149,6 +149,26 @@ h1 {
   line-height: 1.55;
 }
 
+.quick-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 680px;
+  margin: 24px 0 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.quick-steps li {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(35, 122, 91, 0.24);
+  background: rgba(227, 240, 234, 0.72);
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .trust-strip {
   display: grid;
   gap: 12px;
@@ -568,10 +588,21 @@ li {
 }
 
 .lead-card,
+.usefulness-card,
 .premium-panel {
   background:
     linear-gradient(135deg, rgba(35, 122, 91, 0.08), transparent 42%),
     #fffdf9;
+}
+
+.lead-note,
+.usefulness-card p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.lead-note {
+  margin-bottom: 14px;
 }
 
 .lead-form,
@@ -599,6 +630,28 @@ li {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
+}
+
+.usefulness-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.usefulness-card h3,
+.usefulness-card p {
+  margin-bottom: 0;
+}
+
+.usefulness-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.usefulness-actions .secondary-action {
+  min-width: 92px;
+  padding: 0 18px;
 }
 
 .premium-panel p {
@@ -864,7 +917,8 @@ li {
   .seo-section,
   .pricing-grid,
   .locked-grid,
-  .resource-grid {
+  .resource-grid,
+  .usefulness-card {
     grid-template-columns: 1fr;
   }
 
@@ -919,6 +973,7 @@ li {
   .utility-actions,
   .lead-grid,
   .result-grid,
+  .quick-steps,
   .modal-actions {
     grid-template-columns: 1fr;
   }
@@ -963,6 +1018,7 @@ li {
   .seo-section,
   .resource-section,
   .lead-card,
+  .usefulness-card,
   .feedback-card,
   .primary-action,
   .secondary-action,

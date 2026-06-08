@@ -33,6 +33,11 @@
               Paste your resume and a Java/Spring Boot job description to get an ATS-style match score,
               missing keywords, stronger resume bullets, interview questions, and a focused 7-day prep plan.
             </p>
+            <ol class="quick-steps" aria-label="How JavaJobFit works">
+              <li>Paste resume</li>
+              <li>Paste job description</li>
+              <li>Analyze</li>
+            </ol>
           </div>
 
           <div class="trust-strip" aria-label="Product trust points">
@@ -70,9 +75,9 @@
 
           <div class="upload-row">
             <button type="button" class="secondary-action disabled-action" id="upload-button" disabled>
-              Upload PDF/DOCX coming soon
+              PDF/DOCX upload coming soon. Paste text for beta.
             </button>
-            <p>Paste remains the fastest and most private option for this scan.</p>
+            <p>Paste text is the fastest beta option and helps avoid uploading files.</p>
           </div>
 
           <label class="field" for="resume">
@@ -201,7 +206,12 @@
             </article>
 
             <article class="result-card wide lead-card">
-              <h3>Send full report updates to my email</h3>
+              <p class="eyebrow">Beta early access</p>
+              <h3>Get notified when your full JavaJobFit report is ready</h3>
+              <p class="lead-note">
+                Join the beta list for Pro report updates, unlock timing, and Java resume tips.
+                We will never email your resume or job description.
+              </p>
               <form class="lead-form" id="lead-form">
                 <div class="lead-grid">
                   <label for="lead-email">
@@ -228,6 +238,18 @@
                 <button type="submit" class="secondary-action">Save my email</button>
                 <p class="form-status" id="lead-status"></p>
               </form>
+            </article>
+
+            <article class="result-card wide usefulness-card">
+              <div>
+                <h3>Was this report useful?</h3>
+                <p>Quick answers help us improve JavaJobFit before opening Pro reports.</p>
+              </div>
+              <div class="usefulness-actions" role="group" aria-label="Was this report useful?">
+                <button type="button" class="secondary-action" id="useful-yes">Yes</button>
+                <button type="button" class="secondary-action" id="useful-no">No</button>
+              </div>
+              <p class="form-status" id="usefulness-status"></p>
             </article>
 
             <article class="result-card wide premium-panel" id="premium-panel">
