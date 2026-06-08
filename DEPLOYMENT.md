@@ -8,6 +8,24 @@ JavaJobFit beta deploys to:
 
 Supabase public schema currently has no JavaJobFit app tables. Keep `SPRING_FLYWAY_BASELINE_ON_MIGRATE=false` and let Flyway run the initial migrations normally.
 
+## Supabase Free Plan Pause Warning
+
+Supabase Free projects may be paused after low activity. If the JavaJobFit project is paused, backend database calls will fail until the project is restored from the Supabase dashboard.
+
+For beta, use the app normally or run deployment checks after deploy. Do not rely on fake keep-alive traffic or cron jobs just to bypass Supabase inactivity rules. For serious production usage, upgrade to Supabase Pro to avoid inactivity pausing and get proper backup options. The Free plan may not include dashboard backups, so keep export and check docs ready before real users or revenue.
+
+Manual restore steps:
+
+1. Login to the Supabase dashboard manually.
+2. Open project `javajobfit`.
+3. If paused, click Restore/Unpause.
+4. Wait until the project is active.
+5. Redeploy or restart the Render backend if needed.
+6. Check `GET https://java-job-fit.onrender.com/api/health`.
+7. Check `GET https://java-job-fit.onrender.com/api/health/db`.
+8. Run `supabase-checks.sql`.
+9. Run the privacy canary test.
+
 ## Supabase Production Database
 
 Use the Supabase direct PostgreSQL connection for the Render backend and Flyway migrations. Do not use the transaction pooler for migrations.
@@ -41,12 +59,13 @@ Production config pins the PostgreSQL JDBC driver and Hibernate dialect in `appl
 2. Set Render environment variables.
 3. Deploy backend first.
 4. Check `/api/health`.
-5. Check Supabase tables.
-6. Check Flyway history.
-7. Run canary privacy test.
-8. Deploy frontend.
-9. Test live site.
-10. Start beta testing with 50 users.
+5. Check `/api/health/db`.
+6. Check Supabase tables.
+7. Check Flyway history.
+8. Run canary privacy test.
+9. Deploy frontend.
+10. Test live site.
+11. Start beta testing with 50 users.
 
 ## Render Environment Variables
 
@@ -87,9 +106,10 @@ After deployment, open:
 
 ```text
 https://java-job-fit.onrender.com/api/health
+https://java-job-fit.onrender.com/api/health/db
 ```
 
-Expected safe shape:
+Expected safe `/api/health` shape:
 
 ```json
 {
@@ -100,7 +120,19 @@ Expected safe shape:
 }
 ```
 
-The health endpoint must not expose secrets, database URLs, environment variables, stack traces, or Supabase credentials.
+Expected safe `/api/health/db` shape when Supabase is reachable:
+
+```json
+{
+  "status": "ok",
+  "service": "JavaJobFit API",
+  "database": "reachable",
+  "timestamp": "...",
+  "version": "..."
+}
+```
+
+The health endpoints must not expose secrets, database URLs, database usernames, environment variables, stack traces, or Supabase credentials.
 
 ## Supabase Checks
 

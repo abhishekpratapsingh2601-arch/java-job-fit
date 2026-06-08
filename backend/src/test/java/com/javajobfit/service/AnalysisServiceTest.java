@@ -100,4 +100,26 @@ class AnalysisServiceTest {
     void emptyJobDescriptionYieldsZeroScore() {
         assertThat(service.analyze("Java Spring Boot developer", "   ", "oneToThree").getScore()).isZero();
     }
+
+    @Test
+    void privateCanaryMarkersDoNotBecomeGeneratedKeywords() {
+        AnalysisResult result = service.analyze(
+                "DO_NOT_STORE_BETA_CANARY_20260602_RESUME Java developer with Spring Boot, REST API, SQL, JUnit, and microservices experience.",
+                "DO_NOT_STORE_BETA_CANARY_20260602_JD Looking for a Java Spring Boot backend developer with REST APIs, SQL, testing, microservices, and Kafka.",
+                "oneToThree");
+
+        List<String> generated = new java.util.ArrayList<>();
+        generated.addAll(result.getMatchedSkills());
+        generated.addAll(result.getMissingKeywords());
+        generated.addAll(result.getTopFixes());
+        generated.addAll(result.getBulletSuggestions());
+        generated.addAll(result.getInterviewQuestions());
+        generated.addAll(result.getPrepPlan());
+        generated.add(result.getScoreSummary());
+        String generatedOutput = String.join(" ", generated).toLowerCase();
+
+        assertThat(generatedOutput)
+                .doesNotContain("do_not_store", "beta_canary", "canary", "20260602", "resume marker", "jd marker");
+        assertThat(generatedOutput).contains("java", "spring boot", "rest", "sql");
+    }
 }

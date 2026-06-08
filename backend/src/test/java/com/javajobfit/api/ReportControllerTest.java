@@ -53,6 +53,20 @@ class ReportControllerTest {
     }
 
     @Test
+    void databaseHealthEndpointReturnsSafePayload() throws Exception {
+        mockMvc.perform(get("/api/health/db"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ok"))
+                .andExpect(jsonPath("$.service").value("JavaJobFit API"))
+                .andExpect(jsonPath("$.database").value("reachable"))
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.version").exists())
+                .andExpect(content().string(not(containsString("jdbc:"))))
+                .andExpect(content().string(not(containsString("DATABASE_URL"))))
+                .andExpect(content().string(not(containsString("PASSWORD"))));
+    }
+
+    @Test
     void createReportReturnsGeneratedReportAndDoesNotExposeRawResume() throws Exception {
         String rawResume = "Private phone 9999999999 Java Spring Boot SQL";
 

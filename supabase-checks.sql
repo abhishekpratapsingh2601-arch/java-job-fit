@@ -1,3 +1,6 @@
+-- Activity/connectivity check
+select now() as database_time;
+
 -- Show public tables
 select table_name
 from information_schema.tables
@@ -27,21 +30,25 @@ order by table_name, column_name;
 select 'reports' as table_name, id::text
 from reports r
 where row_to_json(r)::text ilike '%DO_NOT_STORE%'
+   or row_to_json(r)::text ilike '%CANARY%'
 
 union all
 
 select 'leads' as table_name, id::text
 from leads l
 where row_to_json(l)::text ilike '%DO_NOT_STORE%'
+   or row_to_json(l)::text ilike '%CANARY%'
 
 union all
 
 select 'feedback' as table_name, id::text
 from feedback f
 where row_to_json(f)::text ilike '%DO_NOT_STORE%'
+   or row_to_json(f)::text ilike '%CANARY%'
 
 union all
 
 select 'events' as table_name, id::text
 from events e
-where row_to_json(e)::text ilike '%DO_NOT_STORE%';
+where row_to_json(e)::text ilike '%DO_NOT_STORE%'
+   or row_to_json(e)::text ilike '%CANARY%';

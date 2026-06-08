@@ -95,7 +95,8 @@ public class AnalysisService {
             "time", "company", "companies", "product", "products", "service", "services", "system",
             "systems", "application", "applications", "skill", "skills", "tool", "tools",
             "technology", "technologies", "environment", "environments", "opportunity", "people",
-            "world", "every", "across", "ensure", "deliver", "delivering", "support", "supporting"));
+            "world", "every", "across", "ensure", "deliver", "delivering", "support", "supporting",
+            "canary", "resume", "resumes", "marker", "markers"));
 
     // Sentence-level cues used to weight requirements as required vs nice-to-have.
     private static final List<String> REQUIRED_CUES = Arrays.asList(
@@ -223,13 +224,18 @@ public class AnalysisService {
     /** Content tokens in order: length &gt; 2, not a stop word, not purely numeric, edges trimmed. */
     private List<String> contentTokens(String text) {
         List<String> tokens = new ArrayList<>();
-        for (String raw : text.replaceAll("[^a-z0-9+#./-]", " ").split("\\s+")) {
+        String cleaned = removePrivateMarkers(text);
+        for (String raw : cleaned.replaceAll("[^a-z0-9+#./-]", " ").split("\\s+")) {
             String word = trimEdges(raw);
             if (word.length() > 2 && !STOP_WORDS.contains(word) && !word.matches("[0-9]+")) {
                 tokens.add(word);
             }
         }
         return tokens;
+    }
+
+    private String removePrivateMarkers(String text) {
+        return text.replaceAll("(do[_-]?not[_-]?store|beta[_-]?canary|canary)[a-z0-9_-]*", " ");
     }
 
     /** Strip leading/trailing separator punctuation while keeping internal ones (ci/cd, node.js). */

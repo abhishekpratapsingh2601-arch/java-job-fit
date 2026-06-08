@@ -174,6 +174,7 @@ const genericStopWords = new Set([
   "systems", "application", "applications", "skill", "skills", "tool", "tools",
   "technology", "technologies", "environment", "environments", "opportunity", "people",
   "world", "every", "ensure", "deliver", "delivering", "support", "supporting",
+  "canary", "resume", "resumes", "marker", "markers",
 ]);
 
 function trackEvent(name, payload = {}) {
@@ -278,8 +279,12 @@ function trimEdges(word) {
   return word.replace(/^[./-]+/, "").replace(/[./-]+$/, "");
 }
 
+function removePrivateMarkers(text) {
+  return text.replace(/(do[_-]?not[_-]?store|beta[_-]?canary|canary)[a-z0-9_-]*/g, " ");
+}
+
 function contentTokens(text) {
-  return text
+  return removePrivateMarkers(text)
     .replace(/[^a-z0-9+#./-]/g, " ")
     .split(/\s+/)
     .map(trimEdges)

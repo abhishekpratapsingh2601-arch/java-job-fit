@@ -1,8 +1,19 @@
 # JavaJobFit Beta Test Checklist
 
+## Before beta launch
+
+- Supabase project is active
+- /api/health works
+- /api/health/db works
+- Supabase SQL Editor can run `select now()`
+- Flyway tables exist
+- Canary privacy search returns 0 rows
+- Render logs do not contain DO_NOT_STORE or CANARY markers
+
 ## Production backend
 
 - /api/health works
+- /api/health/db works
 - Render logs show successful startup
 - Flyway migrations applied
 - Supabase tables exist
