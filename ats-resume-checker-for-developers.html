@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Free ATS Resume Checker for Developers - JavaJobFit</title>
+    <meta
+      name="description"
+      content="A free ATS resume checker built for software developers. Paste your resume and a job description to get an ATS-style match score and the keywords you are missing."
+    />
+    <link rel="canonical" href="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/ats-resume-checker-for-developers.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Free ATS Resume Checker for Developers" />
+    <meta property="og:description" content="See how an applicant tracking system reads your developer resume — match score plus missing keywords, free." />
+    <meta property="og:url" content="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/ats-resume-checker-for-developers.html" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=20260601-canaryfix1" />
+  </head>
+  <body>
+    <main class="legal-page">
+      <article class="legal-card">
+        <p class="eyebrow">JavaJobFit Resource</p>
+        <h1>Free ATS Resume Checker for Developers</h1>
+        <p>
+          Most companies run resumes through an applicant tracking system (ATS) before a human reads them.
+          The ATS ranks how well your resume matches the job description, mostly by keywords and required
+          skills. If your resume does not echo the language of the posting, a strong developer can be
+          filtered out automatically. JavaJobFit is a free ATS resume checker that shows you that match the
+          way the system sees it — a score, your matched strengths, and the exact keywords you are missing —
+          so you can fix the gaps before you apply.
+        </p>
+        <a class="page-cta" href="index.html">Run a free ATS check</a>
+
+        <h2>What an ATS actually checks</h2>
+        <ul>
+          <li>Required hard skills and tools named in the job description.</li>
+          <li>Exact keyword and phrase matches (frameworks, languages, databases).</li>
+          <li>Clear section structure and standard headings it can parse.</li>
+          <li>Job titles and experience signals relevant to the role.</li>
+        </ul>
+
+        <h2>How to pass the ATS without gaming it</h2>
+        <p>
+          Passing the ATS is not about tricks like white hidden text — modern systems ignore or flag those.
+          It is about honestly mirroring the job description: if the role requires "REST APIs" and "SQL" and
+          you have done both, use those exact words inside real achievement bullets. The checker shows which
+          required terms are missing so you add only the ones you can truthfully back up.
+        </p>
+
+        <h2>Why a developer-specific checker helps</h2>
+        <p>
+          Generic resume tools do not understand that "Spring Boot," "JPA," "JUnit," and "CI/CD" are the
+          signals that matter for backend roles. This checker is tuned for software and Java/Spring Boot
+          developers, so the matched strengths and missing keywords are technical and actionable, not vague.
+        </p>
+
+        <h2>FAQ</h2>
+        <p><strong>Is it really free?</strong> Yes — the scan, score, matched strengths, missing keywords, and top fixes are free.</p>
+        <p><strong>Do you store my resume?</strong> No. Raw resume and job description text are processed for the scan and not stored.</p>
+        <p><strong>Does an ATS reject resumes automatically?</strong> It ranks and filters; a low match often means a human never sees you. Improving the match improves your odds.</p>
+
+        <a class="page-cta" href="index.html">Check my resume against a job</a>
+
+        <h2>Privacy note</h2>
+        <p>Raw resume text and job descriptions are not stored.</p>
+      </article>
+      <footer class="site-footer" aria-label="Legal links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms</a>
+        <a href="contact.html">Contact</a>
+      </footer>
+    </main>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const body = JSON.stringify({
+          eventName: "page_view",
+          pagePath: window.location.pathname,
+          source: params.get("source") || "seo_page",
+          utmSource: params.get("utm_source") || "",
+          utmMedium: params.get("utm_medium") || "",
+          utmCampaign: params.get("utm_campaign") || ""
+        });
+        const url = "https://java-job-fit.onrender.com/api/events";
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
+        } else {
+          fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+        }
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>How an ATS Resume Match Score Works - JavaJobFit</title>
+    <meta
+      name="description"
+      content="How ATS resume match scores work and how JavaJobFit calculates an ATS-style score for Java resumes — weighted keyword coverage of the job's required skills, explained honestly."
+    />
+    <link rel="canonical" href="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/how-ats-resume-score-works.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How an ATS Resume Match Score Works" />
+    <meta property="og:description" content="An honest explanation of how ATS-style resume match scores are calculated — and what they do and do not mean." />
+    <meta property="og:url" content="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/how-ats-resume-score-works.html" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=20260601-canaryfix1" />
+  </head>
+  <body>
+    <main class="legal-page">
+      <article class="legal-card">
+        <p class="eyebrow">JavaJobFit Resource</p>
+        <h1>How an ATS Resume Match Score Works</h1>
+        <p>
+          An ATS-style match score estimates how closely your resume matches one specific job description.
+          It is not a measure of your ability and not a guarantee of an interview — it is a signal of how
+          well your resume "speaks the language" the role is screening for. Understanding how the score is
+          built helps you improve it honestly instead of guessing. Here is exactly how JavaJobFit calculates
+          its score, in plain terms.
+        </p>
+        <a class="page-cta" href="index.html">See my match score</a>
+
+        <h2>What the score measures</h2>
+        <p>
+          JavaJobFit reads the job description, identifies the skills and keywords it asks for, and weights
+          them by how strongly the posting requires each one (a "required" skill counts more than a
+          "nice-to-have"). It then checks how much of that weighted requirement your resume actually covers.
+          Your score is the share of the required weight your resume matches — so missing a clearly required
+          skill costs more than missing an optional one.
+        </p>
+
+        <h2>How matching is done (and why it is fair)</h2>
+        <ul>
+          <li><strong>Word-boundary matching</strong> so "API" is not falsely matched inside "rapid".</li>
+          <li><strong>Light stemming</strong> so "test", "testing", and "tested" count as the same skill.</li>
+          <li><strong>Synonyms</strong> so "containers" maps to Docker and "k8s" to Kubernetes.</li>
+          <li><strong>Each skill counts once</strong>, so repeating a keyword ten times does not inflate the score.</li>
+        </ul>
+
+        <h2>What the score does NOT mean</h2>
+        <p>
+          A high score does not promise an interview, and a real company's ATS may weight things differently.
+          The number is a practical editing signal: it tells you where the obvious gaps are so you can close
+          the ones you can honestly close. We show this disclaimer in the product too, because an honest tool
+          is more useful than an inflated one.
+        </p>
+
+        <h2>How to improve your score honestly</h2>
+        <ul>
+          <li>Read the missing-keywords list and add truthful evidence for skills you actually have.</li>
+          <li>Mirror the job description's exact terms inside achievement bullets.</li>
+          <li>Do not keyword-stuff — it raises the number but fails you in the interview.</li>
+        </ul>
+
+        <h2>FAQ</h2>
+        <p><strong>Is this the same as a company's real ATS?</strong> No tool can replicate every proprietary ATS. This is an ATS-style estimate of keyword/skill coverage, which is the part you can control.</p>
+        <p><strong>Why did my score change between jobs?</strong> Because the score is relative to each job description's required skills — different jobs, different requirements.</p>
+        <p><strong>Is it private?</strong> Yes; raw resume and job description text are not stored.</p>
+
+        <a class="page-cta" href="index.html">Check my resume now</a>
+
+        <h2>Privacy note</h2>
+        <p>Raw resume text and job descriptions are not stored.</p>
+      </article>
+      <footer class="site-footer" aria-label="Legal links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms</a>
+        <a href="contact.html">Contact</a>
+      </footer>
+    </main>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const body = JSON.stringify({
+          eventName: "page_view",
+          pagePath: window.location.pathname,
+          source: params.get("source") || "seo_page",
+          utmSource: params.get("utm_source") || "",
+          utmMedium: params.get("utm_medium") || "",
+          utmCampaign: params.get("utm_campaign") || ""
+        });
+        const url = "https://java-job-fit.onrender.com/api/events";
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
+        } else {
+          fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+        }
+      })();
+    </script>
+  </body>
+</html>

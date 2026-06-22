@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Common Java Resume Mistakes (and Fixes) - JavaJobFit</title>
+    <meta
+      name="description"
+      content="The most common Java developer resume mistakes that cause ATS rejections — vague bullets, missing keywords, no metrics — and exactly how to fix each one."
+    />
+    <link rel="canonical" href="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/common-java-resume-mistakes.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Common Java Resume Mistakes (and Fixes)" />
+    <meta property="og:description" content="The Java resume mistakes that trigger ATS rejections, and how to fix each one — with a free match checker." />
+    <meta property="og:url" content="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/common-java-resume-mistakes.html" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=20260601-canaryfix1" />
+  </head>
+  <body>
+    <main class="legal-page">
+      <article class="legal-card">
+        <p class="eyebrow">JavaJobFit Resource</p>
+        <h1>Common Java Resume Mistakes (and How to Fix Them)</h1>
+        <p>
+          Most Java resumes are not rejected because the candidate is weak — they are rejected because the
+          resume hides the candidate's strengths from the ATS and the recruiter. The same handful of
+          mistakes show up again and again. Here are the ones that cost interviews, and the exact fix for
+          each. When you are done, run a free scan to confirm your resume now matches the job.
+        </p>
+        <a class="page-cta" href="index.html">Check my Java resume</a>
+
+        <h2>1. Vague bullets with no result</h2>
+        <p><strong>Fix:</strong> use <em>action + Java/Spring skill + measurable result.</em> "Optimized SQL queries, cutting report load time 40%" beats "responsible for database work."</p>
+
+        <h2>2. Skills the job wants but your resume never names</h2>
+        <p><strong>Fix:</strong> mirror the job description's exact terms (REST APIs, JUnit, Docker) — when true. A free scan shows which required keywords are missing.</p>
+
+        <h2>3. Keyword stuffing you cannot defend</h2>
+        <p><strong>Fix:</strong> only list skills you can explain in an interview. Stuffing passes the filter and fails the technical round.</p>
+
+        <h2>4. No metrics anywhere</h2>
+        <p><strong>Fix:</strong> add numbers — latency, defect rate, users, throughput, time saved. Even rough, honest figures make bullets credible.</p>
+
+        <h2>5. A skills dump instead of evidence</h2>
+        <p><strong>Fix:</strong> keep a short skills line, but prove the important ones inside achievement bullets where they carry weight.</p>
+
+        <h2>6. Generic objective and one resume for every job</h2>
+        <p><strong>Fix:</strong> a 2-line summary tailored to the role, and light per-job tailoring so the required keywords match.</p>
+
+        <h2>7. Projects with no stack or no link</h2>
+        <p><strong>Fix:</strong> name the tech (Java, Spring Boot, the database) and add a GitHub link with a README. Especially vital for freshers.</p>
+
+        <h2>8. Unparseable formatting</h2>
+        <p><strong>Fix:</strong> standard headings, no critical text inside images/tables, simple layout an ATS can read.</p>
+
+        <h2>FAQ</h2>
+        <p><strong>What is the single biggest mistake?</strong> Vague, result-free bullets that match no keywords — they fail both the ATS and the human.</p>
+        <p><strong>How do I know which keywords I am missing?</strong> Paste your resume and the job description into the free checker; it lists them.</p>
+        <p><strong>Is it private?</strong> Yes; raw resume and job description text are not stored.</p>
+
+        <a class="page-cta" href="index.html">Find my resume's gaps</a>
+
+        <h2>Privacy note</h2>
+        <p>Raw resume text and job descriptions are not stored.</p>
+      </article>
+      <footer class="site-footer" aria-label="Legal links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms</a>
+        <a href="contact.html">Contact</a>
+      </footer>
+    </main>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const body = JSON.stringify({
+          eventName: "page_view",
+          pagePath: window.location.pathname,
+          source: params.get("source") || "seo_page",
+          utmSource: params.get("utm_source") || "",
+          utmMedium: params.get("utm_medium") || "",
+          utmCampaign: params.get("utm_campaign") || ""
+        });
+        const url = "https://java-job-fit.onrender.com/api/events";
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
+        } else {
+          fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+        }
+      })();
+    </script>
+  </body>
+</html>

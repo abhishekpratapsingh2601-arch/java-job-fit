@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spring Boot Developer Resume Guide - JavaJobFit</title>
+    <meta
+      name="description"
+      content="How to write a Spring Boot developer resume that passes ATS filters: structure, sections, project bullets, and the skills hiring teams expect. Free match checker included."
+    />
+    <link rel="canonical" href="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/spring-boot-developer-resume.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Spring Boot Developer Resume Guide" />
+    <meta property="og:description" content="Structure, sections, and bullet examples for a Spring Boot developer resume, plus a free ATS match check." />
+    <meta property="og:url" content="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/spring-boot-developer-resume.html" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=20260601-canaryfix1" />
+  </head>
+  <body>
+    <main class="legal-page">
+      <article class="legal-card">
+        <p class="eyebrow">JavaJobFit Resource</p>
+        <h1>Spring Boot Developer Resume Guide</h1>
+        <p>
+          A Spring Boot developer resume should make two things obvious in seconds: that you build real
+          services with the Spring ecosystem, and that you can be trusted with production code. This guide
+          covers how to structure the resume, what each section should contain, and how to write bullets
+          that match the job description and pass ATS filters — then you can run a free scan to see your
+          match score against a specific role.
+        </p>
+        <a class="page-cta" href="index.html">Score my Spring Boot resume</a>
+
+        <h2>Resume structure that works for Spring Boot roles</h2>
+        <ul>
+          <li><strong>Summary:</strong> 2 lines naming your level, core stack (Java + Spring Boot), and strongest proof.</li>
+          <li><strong>Skills:</strong> grouped — language, frameworks, data, testing, build/ops — matching the job's terms.</li>
+          <li><strong>Experience:</strong> achievement bullets with metrics, not duty lists.</li>
+          <li><strong>Projects:</strong> especially important for juniors; one or two complete builds with the stack.</li>
+          <li><strong>Education / certs:</strong> brief, near the bottom unless you are a fresher.</li>
+        </ul>
+
+        <h2>What hiring teams expect to see</h2>
+        <p>
+          Spring Boot, Spring MVC, Spring Data JPA, REST API design, validation and exception handling, SQL
+          and JPA/Hibernate, JUnit and Mockito, Maven or Gradle, Git, Docker, and CI/CD. Senior roles add
+          microservices, messaging (Kafka), caching, security, and cloud. Include only what is true for you
+          — and put it inside results.
+        </p>
+
+        <h2>Spring Boot bullet examples</h2>
+        <ul>
+          <li><strong>Weak:</strong> "Worked on Spring Boot microservices."</li>
+          <li><strong>Strong:</strong> "Designed 4 Spring Boot microservices with REST APIs, Spring Data JPA, and Kafka events; added JUnit/Mockito tests and a CI/CD pipeline, cutting release time by half."</li>
+          <li><strong>Strong (junior):</strong> "Built a Spring Boot inventory API with DTO validation, PostgreSQL, and Swagger docs; covered the service layer with unit tests."</li>
+        </ul>
+
+        <h2>Tailor to each job</h2>
+        <p>
+          The same resume rarely fits every Spring Boot posting — one wants Kafka and Kubernetes, another
+          wants clean REST and SQL. Paste your resume and the target description into the free checker to see
+          which required keywords you are missing for that specific role, then adjust truthfully.
+        </p>
+
+        <h2>FAQ</h2>
+        <p><strong>How many projects should I list?</strong> One or two strong, well-described builds beat a long list of unfinished ones.</p>
+        <p><strong>Where do Spring keywords go?</strong> In the summary, skills group, and inside achievement bullets where they carry evidence.</p>
+        <p><strong>Is the checker private?</strong> Yes; raw resume and job description text are not stored.</p>
+
+        <a class="page-cta" href="index.html">Check my Spring Boot resume now</a>
+
+        <h2>Privacy note</h2>
+        <p>Raw resume text and job descriptions are not stored.</p>
+      </article>
+      <footer class="site-footer" aria-label="Legal links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms</a>
+        <a href="contact.html">Contact</a>
+      </footer>
+    </main>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const body = JSON.stringify({
+          eventName: "page_view",
+          pagePath: window.location.pathname,
+          source: params.get("source") || "seo_page",
+          utmSource: params.get("utm_source") || "",
+          utmMedium: params.get("utm_medium") || "",
+          utmCampaign: params.get("utm_campaign") || ""
+        });
+        const url = "https://java-job-fit.onrender.com/api/events";
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
+        } else {
+          fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+        }
+      })();
+    </script>
+  </body>
+</html>

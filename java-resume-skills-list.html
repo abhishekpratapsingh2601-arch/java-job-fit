@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Skills to Put on a Java Developer Resume - JavaJobFit</title>
+    <meta
+      name="description"
+      content="The skills to put on a Java developer resume in 2026 — core Java, Spring Boot, SQL, testing, cloud, and more — organized by category, with how to show them. Free ATS check."
+    />
+    <link rel="canonical" href="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/java-resume-skills-list.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Skills to Put on a Java Developer Resume" />
+    <meta property="og:description" content="The Java skills recruiters and ATS look for, grouped by category, with how to prove each — plus a free match checker." />
+    <meta property="og:url" content="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/java-resume-skills-list.html" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=20260601-canaryfix1" />
+  </head>
+  <body>
+    <main class="legal-page">
+      <article class="legal-card">
+        <p class="eyebrow">JavaJobFit Resource</p>
+        <h1>Skills to Put on a Java Developer Resume</h1>
+        <p>
+          Recruiters and applicant tracking systems scan Java resumes for a recognizable set of backend
+          skills. Listing the right ones — and proving them — is what separates a resume that gets shortlisted
+          from one that gets filtered. Below is a categorized list of the skills hiring teams look for on a
+          Java developer resume, plus guidance on which to include and how to back them up. Then run a free
+          scan to see which of these a specific job actually requires.
+        </p>
+        <a class="page-cta" href="index.html">Check which skills I am missing</a>
+
+        <h2>Core language &amp; fundamentals</h2>
+        <p>Java, OOP, collections, generics, streams, exception handling, concurrency/multithreading, JVM basics.</p>
+
+        <h2>Frameworks</h2>
+        <p>Spring Boot, Spring MVC, Spring Security, Spring Data JPA, Hibernate.</p>
+
+        <h2>APIs &amp; architecture</h2>
+        <p>REST API design, microservices, DTOs, validation, exception handling, API versioning, system design basics.</p>
+
+        <h2>Databases</h2>
+        <p>SQL (MySQL, PostgreSQL, Oracle), JPA mappings, transactions, indexing, query optimization; NoSQL (MongoDB, Redis) when relevant.</p>
+
+        <h2>Testing &amp; quality</h2>
+        <p>JUnit, Mockito, integration testing, code reviews, clean code practices.</p>
+
+        <h2>Build, version control &amp; DevOps</h2>
+        <p>Maven, Gradle, Git, Docker, CI/CD (Jenkins, GitHub Actions), logging and monitoring.</p>
+
+        <h2>Cloud &amp; messaging (if you have used them)</h2>
+        <p>AWS, Azure, GCP, Kubernetes, Kafka, RabbitMQ.</p>
+
+        <h2>How to choose which to list</h2>
+        <p>
+          Do not list all of these — list the ones the target job names and that you can honestly defend.
+          A focused skills section that mirrors the job description beats an exhaustive dump. Put your
+          strongest, most relevant skills first, and prove the important ones inside achievement bullets
+          ("Built Spring Boot REST APIs with JUnit tests") rather than leaving them as bare words.
+        </p>
+
+        <h2>FAQ</h2>
+        <p><strong>Hard skills or soft skills?</strong> Lead with hard/technical skills for Java roles; weave soft skills into bullets, not a separate list.</p>
+        <p><strong>How many skills is too many?</strong> If you cannot discuss it in an interview, leave it off. Relevance beats volume.</p>
+        <p><strong>Is the checker free and private?</strong> Yes; raw resume and job description text are not stored.</p>
+
+        <a class="page-cta" href="index.html">Match my skills to a job</a>
+
+        <h2>Privacy note</h2>
+        <p>Raw resume text and job descriptions are not stored.</p>
+      </article>
+      <footer class="site-footer" aria-label="Legal links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms</a>
+        <a href="contact.html">Contact</a>
+      </footer>
+    </main>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const body = JSON.stringify({
+          eventName: "page_view",
+          pagePath: window.location.pathname,
+          source: params.get("source") || "seo_page",
+          utmSource: params.get("utm_source") || "",
+          utmMedium: params.get("utm_medium") || "",
+          utmCampaign: params.get("utm_campaign") || ""
+        });
+        const url = "https://java-job-fit.onrender.com/api/events";
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
+        } else {
+          fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+        }
+      })();
+    </script>
+  </body>
+</html>
