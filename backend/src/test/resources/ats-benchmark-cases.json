@@ -1,0 +1,202 @@
+[
+  {
+    "name": "strong_mid_java_backend",
+    "resume": "Summary: Java backend engineer with 3 years experience. Skills: Java, Spring Boot, REST APIs, Hibernate, JPA, PostgreSQL, JUnit, Mockito, Docker, Git, Maven. Experience: Built Java Spring Boot REST APIs for onboarding, optimized SQL queries by 35%, wrote JUnit and Mockito tests, containerized services with Docker, and supported microservices in production.",
+    "jobDescription": "Required: Core Java, Spring Boot, REST API design, Hibernate, JPA, SQL databases, JUnit, Mockito, Docker, Git, Maven, and microservices. Kafka is a plus.",
+    "experienceLevel": "threeToFive",
+    "expectedScoreMin": 68,
+    "expectedScoreMax": 100,
+    "mustIncludeTerms": ["java", "spring boot"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "weak_non_backend_resume",
+    "resume": "Summary: Digital marketing associate with content writing, SEO campaigns, and social media analytics experience.",
+    "jobDescription": "Required: Java, Spring Boot, REST APIs, SQL, JUnit, Docker, Git.",
+    "experienceLevel": "oneToThree",
+    "expectedScoreMin": 0,
+    "expectedScoreMax": 35,
+    "mustIncludeTerms": ["java"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "missing_spring_boot_cap",
+    "resume": "Experience: Built Core Java command line tools, SQL reports, and Git workflows. Wrote JUnit tests and Maven builds.",
+    "jobDescription": "Required: Java, Spring Boot, REST APIs, SQL, JUnit, Maven, Git.",
+    "experienceLevel": "oneToThree",
+    "expectedScoreMin": 20,
+    "expectedScoreMax": 65,
+    "mustIncludeTerms": ["spring boot"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "missing_java_cap",
+    "resume": "Experience: Built Python Flask APIs with PostgreSQL, Docker, Git, and unit tests.",
+    "jobDescription": "Required: Java, Spring Boot, REST APIs, SQL, Docker, Git.",
+    "experienceLevel": "oneToThree",
+    "expectedScoreMin": 0,
+    "expectedScoreMax": 55,
+    "mustIncludeTerms": ["java"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "skills_only_cap",
+    "resume": "Skills: Java, Spring Boot, REST APIs, SQL, JUnit, Mockito, Docker, Git, Maven, Kafka, microservices.",
+    "jobDescription": "Required: Java, Spring Boot, REST APIs, SQL, JUnit, Mockito, Docker, Git, Maven, Kafka, microservices.",
+    "experienceLevel": "oneToThree",
+    "expectedScoreMin": 45,
+    "expectedScoreMax": 80,
+    "mustIncludeTerms": ["java", "spring boot"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "impact_metrics_bonus",
+    "resume": "Experience: Built Java Spring Boot REST APIs, reduced latency by 40%, improved SQL query performance by 30%, wrote JUnit tests, and Dockerized deployments.",
+    "jobDescription": "Required: Java, Spring Boot, REST APIs, SQL, JUnit, Docker. Preferred: performance optimization.",
+    "experienceLevel": "threeToFive",
+    "expectedScoreMin": 40,
+    "expectedScoreMax": 85,
+    "mustIncludeTerms": ["java", "spring boot"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "fresher_project_fit",
+    "resume": "Projects: Built a Java Spring Boot expense tracker with REST APIs, MySQL, JPA, JWT authentication, JUnit tests, Maven, and Git. Education: B.Tech computer science.",
+    "jobDescription": "Required: Fresher Java developer with Java, Spring Boot projects, REST APIs, SQL, Git, and JUnit.",
+    "experienceLevel": "fresher",
+    "expectedScoreMin": 55,
+    "expectedScoreMax": 92,
+    "mustIncludeTerms": ["java", "spring boot"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "junior_against_senior_role",
+    "resume": "Experience: Fixed bugs in Java Spring Boot REST APIs and wrote JUnit tests for service classes.",
+    "jobDescription": "Required: Senior Java engineer with system design, architecture, microservices, Kafka, Kubernetes, mentoring, and production ownership.",
+    "experienceLevel": "senior",
+    "expectedScoreMin": 0,
+    "expectedScoreMax": 62,
+    "mustIncludeTerms": ["system design"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "senior_architecture_fit",
+    "resume": "Experience: Led Java Spring Boot microservices architecture, system design reviews, Kafka event-driven services, Kubernetes deployments, production observability, and mentoring for 6 engineers.",
+    "jobDescription": "Required: Senior Java engineer with Spring Boot, microservices, Kafka, Kubernetes, system design, architecture, mentoring, and observability.",
+    "experienceLevel": "senior",
+    "expectedScoreMin": 70,
+    "expectedScoreMax": 100,
+    "mustIncludeTerms": ["java", "system design"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "kafka_gap",
+    "resume": "Experience: Built Java Spring Boot REST APIs with SQL, JUnit, Docker, Git, and Maven.",
+    "jobDescription": "Required: Java, Spring Boot, REST APIs, SQL, Docker, Kafka, event streaming, and microservices.",
+    "experienceLevel": "threeToFive",
+    "expectedScoreMin": 45,
+    "expectedScoreMax": 78,
+    "mustIncludeTerms": ["kafka"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "sql_heavy_role",
+    "resume": "Experience: Built Java Spring Boot services with PostgreSQL, optimized SQL queries, used Hibernate JPA, wrote integration tests, and reviewed schema indexes.",
+    "jobDescription": "Required: Java, Spring Boot, SQL, PostgreSQL, Hibernate, JPA, query optimization, and database performance.",
+    "experienceLevel": "threeToFive",
+    "expectedScoreMin": 40,
+    "expectedScoreMax": 85,
+    "mustIncludeTerms": ["sql", "hibernate"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "testing_focused_role",
+    "resume": "Experience: Built Java services with JUnit, Mockito, integration tests, Maven, Git, and Spring Boot REST endpoints.",
+    "jobDescription": "Required: Java, Spring Boot, JUnit, Mockito, unit testing, integration testing, Maven, and Git.",
+    "experienceLevel": "oneToThree",
+    "expectedScoreMin": 40,
+    "expectedScoreMax": 90,
+    "mustIncludeTerms": ["junit", "mockito"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "microservices_gap",
+    "resume": "Experience: Built Java Spring Boot REST APIs with SQL and JUnit in a monolith application.",
+    "jobDescription": "Required: Java, Spring Boot, REST APIs, microservices, Docker, Kubernetes, Kafka, and observability.",
+    "experienceLevel": "threeToFive",
+    "expectedScoreMin": 35,
+    "expectedScoreMax": 75,
+    "mustIncludeTerms": ["microservices"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "cloud_devops_gap",
+    "resume": "Experience: Built Java Spring Boot REST APIs, SQL persistence, JUnit tests, and Git workflows.",
+    "jobDescription": "Required: Java, Spring Boot, REST APIs, Docker, Kubernetes, AWS, CI/CD, Terraform, and monitoring.",
+    "experienceLevel": "threeToFive",
+    "expectedScoreMin": 30,
+    "expectedScoreMax": 72,
+    "mustIncludeTerms": ["aws"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "keyword_stuffing_cap",
+    "resume": "Skills: Java Java Java Java Spring Boot Spring Boot REST API REST API SQL SQL Docker Docker Git Git Kafka Kafka microservices microservices.",
+    "jobDescription": "Required: Java, Spring Boot, REST APIs, SQL, Docker, Git, Kafka, and microservices.",
+    "experienceLevel": "oneToThree",
+    "expectedScoreMin": 35,
+    "expectedScoreMax": 70,
+    "mustIncludeTerms": ["java", "spring boot"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "very_short_resume_cap",
+    "resume": "Java Spring Boot.",
+    "jobDescription": "Required: Java, Spring Boot, REST APIs, SQL, JUnit, Docker, Git, and microservices.",
+    "experienceLevel": "fresher",
+    "expectedScoreMin": 0,
+    "expectedScoreMax": 45,
+    "mustIncludeTerms": ["rest apis"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "private_canary_filtered",
+    "resume": "DO_NOT_STORE_BETA_CANARY_20260608_RESUME Experience: Built Java Spring Boot REST APIs with SQL, JUnit, Docker, and Git.",
+    "jobDescription": "DO_NOT_STORE_BETA_CANARY_20260608_JD Required: Java, Spring Boot, REST APIs, SQL, JUnit, Docker, Git, and Kafka.",
+    "experienceLevel": "oneToThree",
+    "expectedScoreMin": 40,
+    "expectedScoreMax": 92,
+    "mustIncludeTerms": ["kafka"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary", "20260608"]
+  },
+  {
+    "name": "alias_restful_postgres",
+    "resume": "Experience: Built SpringBoot RESTful services using Postgres, GitHub Actions, Gradle, and Docker.",
+    "jobDescription": "Required: Spring Boot, REST APIs, PostgreSQL, Git, Gradle, Docker, and CI/CD.",
+    "experienceLevel": "oneToThree",
+    "expectedScoreMin": 40,
+    "expectedScoreMax": 95,
+    "mustIncludeTerms": ["spring boot", "rest"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "preferred_only_gap",
+    "resume": "Experience: Built Java Spring Boot REST APIs with SQL, JUnit, Git, Maven, and Docker.",
+    "jobDescription": "Required: Java, Spring Boot, REST APIs, SQL, JUnit, Git, Maven, Docker. Preferred: Kafka and Kubernetes.",
+    "experienceLevel": "threeToFive",
+    "expectedScoreMin": 40,
+    "expectedScoreMax": 95,
+    "mustIncludeTerms": ["kafka"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  },
+  {
+    "name": "readability_penalty",
+    "resume": "java springboot rest api sql docker git junit kafka microservices prod debug support alerts logs query fix build deploy sprint scrum cloud server test mock api api api",
+    "jobDescription": "Required: Java, Spring Boot, REST APIs, SQL, Docker, Git, JUnit, Kafka, microservices, debugging, and production support.",
+    "experienceLevel": "threeToFive",
+    "expectedScoreMin": 35,
+    "expectedScoreMax": 78,
+    "mustIncludeTerms": ["java", "spring boot"],
+    "mustNotIncludeTerms": ["do_not_store", "beta_canary"]
+  }
+]

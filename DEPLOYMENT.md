@@ -102,6 +102,32 @@ Instance Type: Free
 
 Flyway runs automatically on backend startup before JPA validation. Production uses `ddl-auto: validate`, so Hibernate validates the Flyway-created schema instead of creating or changing tables.
 
+## Render 503 Troubleshooting
+
+If `https://java-job-fit.onrender.com/api/health` returns `503`, treat it as a backend startup/configuration issue first, not a frontend issue.
+
+Check Render in this order:
+
+1. Open the `java-job-fit` Render service.
+2. Confirm the latest GitHub commit is deployed.
+3. Confirm the service is not paused and allow a sleeping Free instance time to wake up.
+4. Confirm Render settings are still Docker, root directory `backend`, and Dockerfile path `Dockerfile`.
+5. Confirm the Java runtime is Java 11 in the Dockerfile.
+6. Open **Environment** and confirm the required variables from `render-env.example.txt` exist.
+7. Confirm `SPRING_PROFILES_ACTIVE=prod`.
+8. Confirm `SPRING_DATASOURCE_URL` uses the Supabase direct PostgreSQL host on port `5432` with `sslmode=require`.
+9. Do not use the Supabase transaction pooler port `6543` for Flyway migrations.
+10. Confirm `SPRING_DATASOURCE_USERNAME` and `SPRING_DATASOURCE_PASSWORD` are set in Render, not committed to the repo.
+11. Confirm `SPRING_FLYWAY_ENABLED=true`.
+12. Confirm `SPRING_FLYWAY_BASELINE_ON_MIGRATE=false` for the empty JavaJobFit production schema.
+13. Confirm `SPRING_JPA_HIBERNATE_DDL_AUTO=validate`.
+14. Check whether the Supabase Free project is paused. If it is paused, unpause it before restarting Render.
+15. Open Render logs and look for Flyway migration failures, database connection failures, missing environment variables, or Spring startup failures.
+16. Confirm `/api/health` returns HTTP 200.
+17. Confirm `/api/health/db` returns HTTP 200.
+
+A common 503 cause is missing Render environment variables. With the `prod` profile active, JavaJobFit expects a PostgreSQL datasource. If Render has no datasource URL, username, or password, startup can fail before health endpoints are available.
+
 After deployment, open:
 
 ```text
@@ -133,6 +159,30 @@ Expected safe `/api/health/db` shape when Supabase is reachable:
 ```
 
 The health endpoints must not expose secrets, database URLs, database usernames, environment variables, stack traces, or Supabase credentials.
+
+## Local Production-Like Smoke Boot
+
+Use this only when you want to reproduce production startup locally. Keep secrets in your shell session and never commit them.
+
+```bash
+cd backend
+SPRING_PROFILES_ACTIVE=prod \
+SPRING_FLYWAY_ENABLED=true \
+SPRING_FLYWAY_BASELINE_ON_MIGRATE=false \
+SPRING_JPA_HIBERNATE_DDL_AUTO=validate \
+SPRING_DATASOURCE_URL="jdbc:postgresql://db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require" \
+SPRING_DATASOURCE_USERNAME="postgres" \
+SPRING_DATASOURCE_PASSWORD="YOUR_SUPABASE_DB_PASSWORD" \
+mvn -Dmaven.repo.local=./.m2 spring-boot:run
+```
+
+For live post-deploy verification, run the smoke script from the repo root:
+
+```bash
+PROD_API_BASE_URL="https://java-job-fit.onrender.com" bash scripts/live-smoke-test.sh
+```
+
+The script uses fake canary text, checks health endpoints, creates one public report, verifies numeric report IDs are not exposed, and confirms lead, feedback, and event endpoints accept safe payloads.
 
 ## Supabase Checks
 

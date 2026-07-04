@@ -52,6 +52,7 @@ public class ReportService {
         report.setBulletSuggestions(join(result.getBulletSuggestions()));
         report.setInterviewQuestions(join(result.getInterviewQuestions()));
         report.setPrepPlan(join(result.getPrepPlan()));
+        report.setScoreBreakdown(encodeBreakdown(result.getScoreBreakdown()));
 
         return toResponse(reportRepository.save(report));
     }
@@ -95,6 +96,7 @@ public class ReportService {
         response.setBulletUpgrades(limit(bulletSuggestions, 1));
         response.setInterviewQuestions(limit(interviewQuestions, 3));
         response.setPrepPlan(limit(prepPlan, 2));
+        applyBreakdown(response, decodeBreakdown(report.getScoreBreakdown()));
         response.setFreePreview(true);
         response.setPremiumAvailable(true);
         response.setPremiumLockedSections(PREMIUM_LOCKED_SECTIONS);
@@ -128,5 +130,51 @@ public class ReportService {
 
     private List<String> limit(List<String> values, int maxItems) {
         return values.stream().limit(maxItems).collect(Collectors.toList());
+    }
+
+    private String encodeBreakdown(ScoreBreakdown breakdown) {
+        if (breakdown == null) {
+            return "";
+        }
+        return breakdown.getMustHaveScore() + "|"
+                + breakdown.getPreferredScore() + "|"
+                + breakdown.getKeywordScore() + "|"
+                + breakdown.getEvidenceScore() + "|"
+                + breakdown.getSeniorityScore() + "|"
+                + breakdown.getImpactScore() + "|"
+                + breakdown.getReadabilityScore();
+    }
+
+    private ScoreBreakdown decodeBreakdown(String value) {
+        if (value == null || value.isBlank()) {
+            return new ScoreBreakdown();
+        }
+        String[] parts = value.split("\\|");
+        if (parts.length != 7) {
+            return new ScoreBreakdown();
+        }
+        try {
+            return new ScoreBreakdown(
+                    Integer.parseInt(parts[0]),
+                    Integer.parseInt(parts[1]),
+                    Integer.parseInt(parts[2]),
+                    Integer.parseInt(parts[3]),
+                    Integer.parseInt(parts[4]),
+                    Integer.parseInt(parts[5]),
+                    Integer.parseInt(parts[6]));
+        } catch (NumberFormatException ignored) {
+            return new ScoreBreakdown();
+        }
+    }
+
+    private void applyBreakdown(ReportResponse response, ScoreBreakdown breakdown) {
+        response.setScoreBreakdown(breakdown);
+        response.setMustHaveScore(breakdown.getMustHaveScore());
+        response.setPreferredScore(breakdown.getPreferredScore());
+        response.setKeywordScore(breakdown.getKeywordScore());
+        response.setEvidenceScore(breakdown.getEvidenceScore());
+        response.setSeniorityScore(breakdown.getSeniorityScore());
+        response.setImpactScore(breakdown.getImpactScore());
+        response.setReadabilityScore(breakdown.getReadabilityScore());
     }
 }

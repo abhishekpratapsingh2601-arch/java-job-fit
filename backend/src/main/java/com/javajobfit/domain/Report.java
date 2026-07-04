@@ -48,6 +48,9 @@ public class Report {
     @Column(columnDefinition = "TEXT")
     private String prepPlan;
 
+    @Column(columnDefinition = "TEXT")
+    private String scoreBreakdown;
+
     @Column(nullable = false)
     private Instant createdAt;
 
@@ -141,6 +144,14 @@ public class Report {
 
     public void setPrepPlan(String prepPlan) {
         this.prepPlan = prepPlan;
+    }
+
+    public String getScoreBreakdown() {
+        return scoreBreakdown;
+    }
+
+    public void setScoreBreakdown(String scoreBreakdown) {
+        this.scoreBreakdown = scoreBreakdown;
     }
 
     public Instant getCreatedAt() {

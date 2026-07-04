@@ -3,6 +3,8 @@ package com.javajobfit.api.dto;
 import java.time.Instant;
 import java.util.List;
 
+import com.javajobfit.service.ScoreBreakdown;
+
 public class ReportResponse {
     private String id;
     private String reportId;
@@ -18,6 +20,14 @@ public class ReportResponse {
     private List<String> bulletUpgrades;
     private List<String> interviewQuestions;
     private List<String> prepPlan;
+    private ScoreBreakdown scoreBreakdown;
+    private int mustHaveScore;
+    private int preferredScore;
+    private int keywordScore;
+    private int evidenceScore;
+    private int seniorityScore;
+    private int impactScore;
+    private int readabilityScore;
     private boolean freePreview;
     private boolean premiumAvailable;
     private List<String> premiumLockedSections;
@@ -134,6 +144,70 @@ public class ReportResponse {
 
     public void setPrepPlan(List<String> prepPlan) {
         this.prepPlan = prepPlan;
+    }
+
+    public ScoreBreakdown getScoreBreakdown() {
+        return scoreBreakdown;
+    }
+
+    public void setScoreBreakdown(ScoreBreakdown scoreBreakdown) {
+        this.scoreBreakdown = scoreBreakdown;
+    }
+
+    public int getMustHaveScore() {
+        return mustHaveScore;
+    }
+
+    public void setMustHaveScore(int mustHaveScore) {
+        this.mustHaveScore = mustHaveScore;
+    }
+
+    public int getPreferredScore() {
+        return preferredScore;
+    }
+
+    public void setPreferredScore(int preferredScore) {
+        this.preferredScore = preferredScore;
+    }
+
+    public int getKeywordScore() {
+        return keywordScore;
+    }
+
+    public void setKeywordScore(int keywordScore) {
+        this.keywordScore = keywordScore;
+    }
+
+    public int getEvidenceScore() {
+        return evidenceScore;
+    }
+
+    public void setEvidenceScore(int evidenceScore) {
+        this.evidenceScore = evidenceScore;
+    }
+
+    public int getSeniorityScore() {
+        return seniorityScore;
+    }
+
+    public void setSeniorityScore(int seniorityScore) {
+        this.seniorityScore = seniorityScore;
+    }
+
+    public int getImpactScore() {
+        return impactScore;
+    }
+
+    public void setImpactScore(int impactScore) {
+        this.impactScore = impactScore;
+    }
+
+    public int getReadabilityScore() {
+        return readabilityScore;
+    }
+
+    public void setReadabilityScore(int readabilityScore) {
+        this.readabilityScore = readabilityScore;
     }
 
     public boolean isFreePreview() {

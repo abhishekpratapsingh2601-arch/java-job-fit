@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="JavaJobFit social preview">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f7efdf"/>
+      <stop offset="0.55" stop-color="#fffdf7"/>
+      <stop offset="1" stop-color="#dcebdd"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="0" x2="1">
+      <stop offset="0" stop-color="#0f684f"/>
+      <stop offset="1" stop-color="#78a98f"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1010" cy="120" r="180" fill="#0f684f" opacity="0.08"/>
+  <circle cx="180" cy="520" r="210" fill="#d99b4a" opacity="0.16"/>
+  <rect x="80" y="80" width="1040" height="470" rx="38" fill="#fffdf7" stroke="#cfc2ac" stroke-width="3"/>
+  <rect x="126" y="128" width="104" height="104" rx="28" fill="url(#mark)"/>
+  <path d="M151 197c9 8 19 12 31 12 18 0 30-11 30-29v-39h-19v39c0 8-4 12-12 12-7 0-13-3-18-8l-12 13z" fill="#fff8ea"/>
+  <path d="M150 144h56v14h-56z" fill="#d99b4a"/>
+  <text x="260" y="170" fill="#0f1f1a" font-family="Arial, sans-serif" font-size="52" font-weight="800">JavaJobFit</text>
+  <text x="126" y="310" fill="#0f1f1a" font-family="Arial, sans-serif" font-size="70" font-weight="800">ATS-style resume checker</text>
+  <text x="126" y="390" fill="#0f1f1a" font-family="Arial, sans-serif" font-size="70" font-weight="800">for Java developers</text>
+  <text x="126" y="468" fill="#31594b" font-family="Arial, sans-serif" font-size="34" font-weight="700">Raw resume text is not stored</text>
+  <rect x="126" y="500" width="300" height="14" rx="7" fill="#0f684f"/>
+  <rect x="446" y="500" width="150" height="14" rx="7" fill="#d99b4a"/>
+</svg>

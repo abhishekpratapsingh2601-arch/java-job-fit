@@ -8,13 +8,63 @@
       name="description"
       content="Tailor your Java resume to a job description in 60 seconds. Get an ATS-style score, missing keywords, better resume bullets, Java interview questions, and a 7-day prep plan."
     />
+    <link rel="canonical" href="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/" />
+    <meta property="og:title" content="JavaJobFit - ATS Resume Checker for Java Developers" />
+    <meta
+      property="og:description"
+      content="ATS-style resume checker for Java developers. Raw resume text is not stored."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/" />
+    <meta property="og:image" content="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/assets/og-image.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="JavaJobFit - ATS Resume Checker for Java Developers" />
+    <meta
+      name="twitter:description"
+      content="ATS-style resume checker for Java developers. Raw resume text is not stored."
+    />
+    <meta name="twitter:image" content="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/assets/og-image.svg" />
+    <meta name="theme-color" content="#0f684f" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260601-canaryfix1" />
+    <link rel="stylesheet" href="styles.css?v=20260701-print1" />
+    <script type="application/ld+json">
+      [
+        {
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "JavaJobFit",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "description": "ATS-style resume checker for Java developers.",
+          "url": "https://abhishekpratapsingh2601-arch.github.io/java-job-fit/",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "INR"
+          }
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": "JavaJobFit",
+          "url": "https://abhishekpratapsingh2601-arch.github.io/java-job-fit/",
+          "description": "Tailor your Java resume to a job description in 60 seconds."
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "Person",
+          "name": "Abhishek Pratap Singh",
+          "url": "https://abhishekpratapsingh2601-arch.github.io/java-job-fit/",
+          "description": "Builder of JavaJobFit, an early beta ATS-style resume checker for Java developers."
+        }
+      ]
+    </script>
   </head>
   <body>
     <main class="app-shell">
@@ -74,10 +124,11 @@
           </div>
 
           <div class="upload-row">
-            <button type="button" class="secondary-action disabled-action" id="upload-button" disabled>
-              PDF/DOCX upload coming soon. Paste text for beta.
-            </button>
-            <p>Paste text is the fastest beta option and helps avoid uploading files.</p>
+            <label class="secondary-action upload-action" for="resume-file">
+              Upload PDF/DOCX resume
+            </label>
+            <input id="resume-file" type="file" accept=".pdf,.doc,.docx,.txt" hidden />
+            <p id="upload-status">Paste text remains the fastest fallback. Uploaded files are only used to extract text and are not stored.</p>
           </div>
 
           <label class="field" for="resume">
@@ -151,6 +202,12 @@
         </div>
 
         <div class="results" id="results" hidden>
+          <div class="print-report-header" aria-hidden="true">
+            <p class="eyebrow">JavaJobFit report</p>
+            <h2>Java resume fit report</h2>
+            <p>Free ATS-style preview. Raw resume and job description are not stored.</p>
+          </div>
+
           <div class="score-card">
             <div>
               <p class="eyebrow">Free JavaJobFit preview</p>
@@ -205,6 +262,11 @@
               <p class="preview-note">Free preview shows the first steps. Full prep plan is part of Pro.</p>
             </article>
 
+            <article class="result-card wide score-breakdown-card">
+              <h3>Score breakdown</h3>
+              <div class="breakdown-grid" id="score-breakdown"></div>
+            </article>
+
             <article class="result-card wide lead-card">
               <p class="eyebrow">Beta early access</p>
               <h3>Get notified when your full JavaJobFit report is ready</h3>
@@ -255,12 +317,17 @@
             <article class="result-card wide premium-panel" id="premium-panel">
               <div>
                 <p class="eyebrow">Coming soon / Early access</p>
-                <h3>Unlock the full JavaJobFit Pro Report</h3>
-                <p>
-                  Pro will include full keyword analysis, 10+ Java resume bullet upgrades, keyword placement
-                  suggestions, full Java/Spring Boot interview questions, a full 7-day prep plan, cover letter
-                  draft, LinkedIn rewrite, and full report export.
-                </p>
+                <h3>What’s inside JavaJobFit Pro</h3>
+                <ul class="compact-list">
+                  <li>Full keyword analysis</li>
+                  <li>10+ Java resume bullet upgrades</li>
+                  <li>Keyword placement suggestions</li>
+                  <li>Full Java/Spring Boot interview questions</li>
+                  <li>Full 7-day prep plan</li>
+                  <li>Cover letter draft</li>
+                  <li>LinkedIn headline/About rewrite</li>
+                  <li>Export full report</li>
+                </ul>
               </div>
               <button type="button" class="primary-action compact-action premium-cta">Join early access</button>
             </article>
@@ -383,13 +450,35 @@
           <a href="java-fresher-resume-checker.html">Java Fresher Resume Checker</a>
           <a href="backend-developer-resume-optimizer.html">Backend Developer Resume Optimizer</a>
           <a href="java-interview-questions-from-job-description.html">Java Interview Questions from Job Description</a>
+          <a href="java-fresher-resume-format.html">Java Fresher Resume Format</a>
           <a href="ats-resume-checker-for-developers.html">Free ATS Resume Checker for Developers</a>
           <a href="spring-boot-developer-resume.html">Spring Boot Developer Resume Guide</a>
+          <a href="senior-java-developer-resume.html">Senior Java Developer Resume</a>
+          <a href="java-developer-resume-1-year-experience.html">Java Resume for 1 Year Experience</a>
           <a href="java-developer-resume-2-to-3-years-experience.html">Java Resume for 2-3 Years Experience</a>
+          <a href="java-developer-resume-3-years-experience.html">Java Resume for 3 Years Experience</a>
+          <a href="microservices-java-resume-keywords.html">Microservices Java Resume Keywords</a>
+          <a href="rest-api-resume-bullet-examples.html">REST API Resume Bullet Examples</a>
+          <a href="kafka-resume-keywords-java-developer.html">Kafka Resume Keywords for Java Developers</a>
+          <a href="hibernate-jpa-resume-keywords.html">Hibernate JPA Resume Keywords</a>
+          <a href="java-developer-resume-for-remote-jobs.html">Java Resume for Remote Jobs</a>
           <a href="common-java-resume-mistakes.html">Common Java Resume Mistakes</a>
           <a href="java-resume-skills-list.html">Skills to Put on a Java Resume</a>
           <a href="how-ats-resume-score-works.html">How the ATS Match Score Works</a>
         </div>
+      </section>
+
+      <section class="founder-section" aria-labelledby="founder-title">
+        <div>
+          <p class="eyebrow">Early beta</p>
+          <h2 id="founder-title">Help shape JavaJobFit</h2>
+          <p>
+            JavaJobFit is being improved with feedback from Java, Spring Boot, and backend developers.
+            Try a scan, compare the suggestions with the role you are targeting, and tell us what would
+            make the report more useful before applying.
+          </p>
+        </div>
+        <a class="founder-link" href="#fit-form">Start a resume scan</a>
       </section>
 
       <footer class="site-footer" aria-label="Legal links">
@@ -429,7 +518,7 @@
       </section>
     </div>
 
-    <script src="config.js?v=20260601-canaryfix1"></script>
-    <script src="app.js?v=20260601-canaryfix1"></script>
+    <script src="config.js?v=20260601-ats2"></script>
+    <script src="app.js?v=20260701-upload-status"></script>
   </body>
 </html>

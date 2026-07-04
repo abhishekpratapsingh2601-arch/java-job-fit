@@ -3,105 +3,176 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>How an ATS Resume Match Score Works - JavaJobFit</title>
-    <meta
-      name="description"
-      content="How ATS resume match scores work and how JavaJobFit calculates an ATS-style score for Java resumes — weighted keyword coverage of the job's required skills, explained honestly."
-    />
+    <title>How an ATS Resume Score Works for Java Developers - JavaJobFit</title>
+    <meta name="description" content="Understand ATS-style resume scores for Java developers: keyword coverage, job-description matching, missing skills, and why scores are estimates, not guarantees." />
     <link rel="canonical" href="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/how-ats-resume-score-works.html" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="How an ATS Resume Match Score Works" />
-    <meta property="og:description" content="An honest explanation of how ATS-style resume match scores are calculated — and what they do and do not mean." />
+    <meta property="og:title" content="How an ATS Resume Score Works for Java Developers" />
+    <meta property="og:description" content="Understand ATS-style resume scores for Java developers: keyword coverage, job-description matching, missing skills, and why scores are estimates, not guarantees." />
     <meta property="og:url" content="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/how-ats-resume-score-works.html" />
+    <meta property="og:image" content="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/assets/og-image.svg" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="How an ATS Resume Score Works for Java Developers - JavaJobFit" />
+    <meta name="twitter:description" content="Understand ATS-style resume scores for Java developers: keyword coverage, job-description matching, missing skills, and why scores are estimates, not guarantees." />
+    <meta name="twitter:image" content="https://abhishekpratapsingh2601-arch.github.io/java-job-fit/assets/og-image.svg" />
+    <meta name="theme-color" content="#0f684f" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260601-canaryfix1" />
+    <link rel="stylesheet" href="styles.css?v=20260601-ats2" />
+    <script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "JavaJobFit",
+        "item": "https://abhishekpratapsingh2601-arch.github.io/java-job-fit/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "How the ATS Resume Score Works",
+        "item": "https://abhishekpratapsingh2601-arch.github.io/java-job-fit/how-ats-resume-score-works.html"
+      }
+    ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "How the ATS Resume Score Works",
+    "headline": "How the ATS Resume Score Works",
+    "description": "Understand ATS-style resume scores for Java developers: keyword coverage, job-description matching, missing skills, and why scores are estimates, not guarantees.",
+    "url": "https://abhishekpratapsingh2601-arch.github.io/java-job-fit/how-ats-resume-score-works.html",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "JavaJobFit",
+      "url": "https://abhishekpratapsingh2601-arch.github.io/java-job-fit/"
+    },
+    "about": {
+      "@type": "SoftwareApplication",
+      "name": "JavaJobFit",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web"
+    }
+  }
+]
+    </script>
   </head>
   <body>
     <main class="legal-page">
-      <article class="legal-card">
+      <article class="legal-card seo-resource-card">
         <p class="eyebrow">JavaJobFit Resource</p>
-        <h1>How an ATS Resume Match Score Works</h1>
-        <p>
-          An ATS-style match score estimates how closely your resume matches one specific job description.
-          It is not a measure of your ability and not a guarantee of an interview — it is a signal of how
-          well your resume "speaks the language" the role is screening for. Understanding how the score is
-          built helps you improve it honestly instead of guessing. Here is exactly how JavaJobFit calculates
-          its score, in plain terms.
-        </p>
-        <a class="page-cta" href="index.html">See my match score</a>
+        <h1>How the ATS Resume Score Works</h1>
+        <p>An ATS-style score is a matching signal, not a magic truth. For Java developers, it estimates whether your resume contains the same important language as the job description: Spring Boot, APIs, databases, testing, deployment, and production responsibilities.</p>
+        <a class="page-cta" href="index.html">Analyze my Java resume</a>
 
-        <h2>What the score measures</h2>
-        <p>
-          JavaJobFit reads the job description, identifies the skills and keywords it asks for, and weights
-          them by how strongly the posting requires each one (a "required" skill counts more than a
-          "nice-to-have"). It then checks how much of that weighted requirement your resume actually covers.
-          Your score is the share of the required weight your resume matches — so missing a clearly required
-          skill costs more than missing an optional one.
-        </p>
+        <h2>Who this page is for</h2>
+        <p>Java and backend developers who want to use resume scores responsibly without chasing unrealistic promises.</p>
 
-        <h2>How matching is done (and why it is fair)</h2>
+        <h2>Important Java/backend keywords</h2>
+        <p>
+          Use keywords as evidence, not decoration. If a target job repeats a term and you have real experience
+          with it, place it in your summary, skills section, or project bullets where it makes sense.
+        </p>
         <ul>
-          <li><strong>Word-boundary matching</strong> so "API" is not falsely matched inside "rapid".</li>
-          <li><strong>Light stemming</strong> so "test", "testing", and "tested" count as the same skill.</li>
-          <li><strong>Synonyms</strong> so "containers" maps to Docker and "k8s" to Kubernetes.</li>
-          <li><strong>Each skill counts once</strong>, so repeating a keyword ten times does not inflate the score.</li>
+              <li>ATS score</li>
+              <li>Keyword coverage</li>
+              <li>Job description match</li>
+              <li>Java</li>
+              <li>Spring Boot</li>
+              <li>REST API</li>
+              <li>SQL</li>
+              <li>Testing</li>
+              <li>Missing keywords</li>
+              <li>Resume bullet upgrades</li>
+              <li>Recruiter screening</li>
+              <li>Estimate</li>
         </ul>
 
-        <h2>What the score does NOT mean</h2>
+        <h2>Good vs bad resume bullet example</h2>
+        <p><strong>Weak:</strong> Optimized resume until a tool gave 100 percent.</p>
+        <p><strong>Stronger:</strong> Used a score to find missing truthful keywords, then rewrote project bullets with Spring Boot, REST API, SQL, and testing evidence from actual work.</p>
         <p>
-          A high score does not promise an interview, and a real company's ATS may weight things differently.
-          The number is a practical editing signal: it tells you where the obvious gaps are so you can close
-          the ones you can honestly close. We show this disclaimer in the product too, because an honest tool
-          is more useful than an inflated one.
+          The stronger version names the technology, the backend behavior, and the result or engineering practice.
+          That is easier for an ATS to match and easier for an interviewer to discuss.
         </p>
 
-        <h2>How to improve your score honestly</h2>
+        <h2>Common mistakes</h2>
         <ul>
-          <li>Read the missing-keywords list and add truthful evidence for skills you actually have.</li>
-          <li>Mirror the job description's exact terms inside achievement bullets.</li>
-          <li>Do not keyword-stuff — it raises the number but fails you in the interview.</li>
+              <li>Believing a high score guarantees interviews.</li>
+              <li>Ignoring readability for humans.</li>
+              <li>Stuffing repeated keywords.</li>
+              <li>Using one generic resume for every Java job.</li>
         </ul>
 
-        <h2>FAQ</h2>
-        <p><strong>Is this the same as a company's real ATS?</strong> No tool can replicate every proprietary ATS. This is an ATS-style estimate of keyword/skill coverage, which is the part you can control.</p>
-        <p><strong>Why did my score change between jobs?</strong> Because the score is relative to each job description's required skills — different jobs, different requirements.</p>
-        <p><strong>Is it private?</strong> Yes; raw resume and job description text are not stored.</p>
+        <h2>How JavaJobFit helps</h2>
+        <p>JavaJobFit gives an ATS-style estimate and explains the gaps. Use it as an editing guide, then read the resume like a recruiter would.</p>
+        <p>
+          The score is an ATS-style estimate, not a promise of recruiter response, interview selection, or job offer.
+          Use it as a fast editing guide before you apply.
+        </p>
+        <a class="page-cta" href="index.html">Analyze my Java resume</a>
 
-        <a class="page-cta" href="index.html">Check my resume now</a>
+        <h2>Where to place these keywords</h2>
+        <p>
+          Put the most important keywords in three places: a short summary, a grouped skills section, and
+          real achievement bullets. The summary helps a recruiter understand your direction quickly. The
+          skills section helps with scanning. The bullet section proves that the skill was actually used.
+          For example, Spring Boot in a skills list is useful, but Spring Boot inside a bullet about API
+          validation, JPA queries, testing, or production debugging is much stronger.
+        </p>
+
+        <h2>Quick editing checklist</h2>
+        <ul>
+          <li>Compare your resume with one job description, not ten jobs at once.</li>
+          <li>Add only skills you can explain with a project, ticket, internship, or work example.</li>
+          <li>Replace vague verbs like “worked on” with built, implemented, tested, optimized, documented, or supported.</li>
+          <li>Mention the backend object of the work: API, service, query, consumer, deployment, dashboard, or bug fix.</li>
+          <li>Keep the resume readable for humans; the goal is clear evidence, not a keyword wall.</li>
+        </ul>
+
+        <h2>Related Java resume resources</h2>
+        <ul>
+              <li><a href="ats-resume-checker-for-developers.html">ATS Resume Checker for Developers</a></li>
+              <li><a href="java-developer-resume-checker.html">Java Developer Resume Checker</a></li>
+              <li><a href="common-java-resume-mistakes.html">Common Java Resume Mistakes</a></li>
+              <li><a href="java-interview-questions-from-job-description.html">Java Interview Questions from Job Description</a></li>
+        </ul>
+
+        <h2>Java resume FAQ</h2>
+        <p>
+          <strong>Should I use the same resume for every Java job?</strong> No. Keep one honest master resume,
+          but tailor the visible bullets and skills for each target role. A Spring Boot API job, a Kafka-heavy
+          platform job, and a fresher trainee job will not reward the same wording.
+        </p>
+        <p>
+          <strong>Should I include every keyword from the job description?</strong> Include only the ones you can
+          support with real work, internship, coursework, or project evidence. If you are still learning a skill,
+          mention it in a project context rather than presenting it as production expertise.
+        </p>
+        <p>
+          <strong>What is the fastest useful improvement?</strong> Rewrite one vague bullet into a specific backend
+          bullet. Name the Java/Spring tool, the API or data problem, the test or deployment practice, and the
+          result. One strong bullet is better than five generic lines.
+        </p>
 
         <h2>Privacy note</h2>
-        <p>Raw resume text and job descriptions are not stored.</p>
+        <p>Raw resume text and job descriptions are not stored. Do not paste passwords, IDs, secrets, or highly sensitive personal data.</p>
       </article>
       <footer class="site-footer" aria-label="Legal links">
+        <a href="index.html">JavaJobFit</a>
         <a href="privacy.html">Privacy Policy</a>
         <a href="terms.html">Terms</a>
         <a href="contact.html">Contact</a>
       </footer>
     </main>
-    <script>
-      (() => {
-        const params = new URLSearchParams(window.location.search);
-        const body = JSON.stringify({
-          eventName: "page_view",
-          pagePath: window.location.pathname,
-          source: params.get("source") || "seo_page",
-          utmSource: params.get("utm_source") || "",
-          utmMedium: params.get("utm_medium") || "",
-          utmCampaign: params.get("utm_campaign") || ""
-        });
-        const url = "https://java-job-fit.onrender.com/api/events";
-        if (navigator.sendBeacon) {
-          navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
-        } else {
-          fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
-        }
-      })();
-    </script>
   </body>
 </html>

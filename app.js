@@ -15,6 +15,8 @@ const scoreRing = document.querySelector("#score-ring");
 const analyzeButton = document.querySelector("#analyze-button");
 const sampleButton = document.querySelector("#sample-button");
 const clearButton = document.querySelector("#clear-button");
+const resumeFileInput = document.querySelector("#resume-file");
+const uploadStatus = document.querySelector("#upload-status");
 const printButton = document.querySelector("#print-button");
 const resumeError = document.querySelector("#resume-error");
 const jobError = document.querySelector("#job-error");
@@ -25,6 +27,7 @@ const missingList = document.querySelector("#missing-list");
 const bulletList = document.querySelector("#bullet-list");
 const questionList = document.querySelector("#question-list");
 const planList = document.querySelector("#plan-list");
+const scoreBreakdownNode = document.querySelector("#score-breakdown");
 const lockedGrid = document.querySelector("#locked-grid");
 const copyBulletsButton = document.querySelector("#copy-bullets");
 const copyQuestionsButton = document.querySelector("#copy-questions");
@@ -172,6 +175,7 @@ const genericStopWords = new Set([
   "some", "any", "all", "one", "two", "three", "new", "help", "helping", "make", "making",
   "get", "getting", "want", "need", "needs", "needed", "like", "via", "per", "out", "off",
   "but", "not", "yet", "than", "then", "too", "very", "just", "now", "day", "days",
+  "project", "projects", "available", "availability", "become", "becomes", "became",
   "knowledge", "understanding", "familiarity", "hands", "based", "level", "part", "full",
   "time", "company", "companies", "product", "products", "service", "services", "system",
   "systems", "application", "applications", "skill", "skills", "tool", "tools",
@@ -510,6 +514,15 @@ function normalizeReport(report) {
     bullets: bullets.slice(0, 1),
     questions: questions.slice(0, 3),
     plan: plan.slice(0, 2),
+    scoreBreakdown: report.scoreBreakdown || {
+      mustHaveScore: report.mustHaveScore || 0,
+      preferredScore: report.preferredScore || 0,
+      keywordScore: report.keywordScore || 0,
+      evidenceScore: report.evidenceScore || 0,
+      seniorityScore: report.seniorityScore || 0,
+      impactScore: report.impactScore || 0,
+      readabilityScore: report.readabilityScore || 0,
+    },
     premiumAvailable: report.premiumAvailable !== false,
     premiumLockedSections: report.premiumLockedSections || defaultLockedSections(),
     experienceLevel: report.experienceLevel || experienceInput.value,
@@ -526,26 +539,30 @@ function renderList(node, items) {
   });
 }
 
-function renderLockedSections(sections) {
+function renderLockedSections() {
   lockedGrid.innerHTML = "";
-  sections.forEach((section) => {
-    const card = document.createElement("article");
-    card.className = "locked-card";
-    const badge = document.createElement("span");
-    const heading = document.createElement("h3");
-    const text = document.createElement("p");
-    const button = document.createElement("button");
+  lockedGrid.hidden = true;
+}
 
-    badge.className = "lock-badge";
-    badge.textContent = "Locked";
-    heading.textContent = section;
-    text.textContent = "Unlock the full JavaJobFit Pro Report to access this section.";
-    button.type = "button";
-    button.className = "secondary-action premium-cta";
-    button.textContent = "Join early access";
+function renderScoreBreakdown(breakdown = {}) {
+  if (!scoreBreakdownNode) return;
+  const rows = [
+    ["Must-have skills", breakdown.mustHaveScore, 30],
+    ["Preferred skills", breakdown.preferredScore, 10],
+    ["Keyword alignment", breakdown.keywordScore, 15],
+    ["Evidence quality", breakdown.evidenceScore, 20],
+    ["Seniority fit", breakdown.seniorityScore, 10],
+    ["Impact metrics", breakdown.impactScore, 5],
+    ["Readability", breakdown.readabilityScore, 10],
+  ];
 
-    card.append(badge, heading, text, button);
-    lockedGrid.appendChild(card);
+  scoreBreakdownNode.innerHTML = "";
+  rows.forEach(([label, value, max]) => {
+    const item = document.createElement("div");
+    item.className = "breakdown-item";
+    const safeValue = Math.max(0, Math.min(max, Math.round(Number(value) || 0)));
+    item.innerHTML = `<span>${label}</span><strong>${safeValue}/${max}</strong>`;
+    scoreBreakdownNode.appendChild(item);
   });
 }
 
@@ -554,6 +571,7 @@ function clearRenderedResults() {
     node.innerHTML = "";
   });
   lockedGrid.innerHTML = "";
+  if (scoreBreakdownNode) scoreBreakdownNode.innerHTML = "";
   scoreNode.textContent = "--";
   scoreSummary.textContent = "";
   scoreRing.style.background = "conic-gradient(var(--accent) 0deg, #e1d8c7 0deg)";
@@ -638,6 +656,7 @@ function renderResults(report) {
   renderList(bulletList, latestReport.bullets);
   renderList(questionList, latestReport.questions);
   renderList(planList, latestReport.plan);
+  renderScoreBreakdown(latestReport.scoreBreakdown);
   renderLockedSections(latestReport.premiumLockedSections);
 
   feedbackStatus.textContent = latestReportSaved
@@ -646,6 +665,16 @@ function renderResults(report) {
   emptyState.hidden = true;
   scanProgress.hidden = true;
   results.hidden = false;
+}
+
+function scrollToResults() {
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  requestAnimationFrame(() => {
+    results.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "start",
+    });
+  });
 }
 
 function validateInputs() {
@@ -781,6 +810,76 @@ async function copyText(button, title, items) {
   }
 }
 
+async function extractResumeText(file) {
+  if (!file) return;
+  const allowedExtensions = [".pdf", ".doc", ".docx", ".txt"];
+  const lowerName = file.name.toLowerCase();
+  const isAllowed = allowedExtensions.some((extension) => lowerName.endsWith(extension));
+  const maxBytes = 5 * 1024 * 1024;
+
+  if (!isAllowed) {
+    uploadStatus.textContent = "Could not read this file. Please paste your resume text instead.";
+    resumeFileInput.value = "";
+    return;
+  }
+
+  if (file.size > maxBytes) {
+    uploadStatus.textContent = "This file is too large for beta upload. Please paste your resume text instead.";
+    resumeFileInput.value = "";
+    return;
+  }
+
+  if (window.location.protocol === "file:") {
+    uploadStatus.textContent = "Upload works from the local server URL. Open http://127.0.0.1:4173/ or paste your resume text instead.";
+    resumeFileInput.value = "";
+    return;
+  }
+
+  if (!apiBase) {
+    uploadStatus.textContent = "PDF/DOCX upload needs the backend. Paste text for beta.";
+    resumeFileInput.value = "";
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+  uploadStatus.textContent = "Reading your resume file through JavaJobFit API...";
+
+  try {
+    const response = await fetch(`${apiBase}/api/resume/extract`, {
+      method: "POST",
+      body: formData,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (response.status === 404) {
+      throw new Error("resume_extract_endpoint_missing");
+    }
+    if (!response.ok || !payload.text) {
+      throw new Error(payload.error || "Could not read this file.");
+    }
+
+    resumeInput.value = payload.text;
+    resumeError.textContent = "";
+    resumePasteTracked = true;
+    uploadStatus.textContent = "Resume text extracted. Please review it before analyzing.";
+    trackEvent("resume_uploaded", {
+      label: lowerName.endsWith(".txt") ? "txt" : "document",
+      reason: "text_extracted",
+    });
+  } catch (error) {
+    console.warn("Resume extraction failed", error);
+    if (error.message === "resume_extract_endpoint_missing") {
+      uploadStatus.textContent = "Resume upload is temporarily unavailable. Please paste your resume text instead.";
+      trackEvent("scan_failed", { reason: "resume_extract_endpoint_missing" });
+    } else {
+      uploadStatus.textContent = "Could not read this file. Please paste your resume text instead.";
+      trackEvent("scan_failed", { reason: "resume_extract_failed" });
+    }
+  } finally {
+    resumeFileInput.value = "";
+  }
+}
+
 async function submitUsefulnessFeedback(answer) {
   usefulnessStatus.textContent = "";
 
@@ -795,12 +894,13 @@ async function submitUsefulnessFeedback(answer) {
   });
 
   try {
-    const response = await fetch(`${apiBase}/api/feedback`, {
+    const response = await fetch(`${apiBase}/api/outcomes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        publicId: latestReport?.id || null,
-        email: "",
+        reportPublicId: latestReport?.id || null,
+        outcomeType: answer === "yes" ? "useful" : "not_useful",
+        usefulnessRating: answer === "yes" ? 5 : 2,
         message: `Usefulness prompt: ${answer}. Score: ${latestReport?.score ?? "unknown"}.`,
       }),
     });
@@ -841,6 +941,7 @@ form.addEventListener("submit", async (event) => {
     const report = await buildReport();
     await finishScanProgress();
     renderResults(report);
+    scrollToResults();
     trackEvent("scan_completed", { publicId: latestReport?.id || null, score: latestReport.score });
   } catch (error) {
     console.warn("Scan failed", error);
@@ -859,6 +960,9 @@ sampleButton.addEventListener("click", () => {
   experienceInput.value = "oneToThree";
   resumeError.textContent = "";
   jobError.textContent = "";
+  if (uploadStatus) {
+    uploadStatus.textContent = "Paste text remains the fastest fallback. Uploaded files are only used to extract text and are not stored.";
+  }
   feedbackForm.reset();
   leadForm.reset();
   resetScanState();
@@ -873,7 +977,14 @@ clearButton.addEventListener("click", () => {
   jdPasteTracked = false;
   resumeError.textContent = "";
   jobError.textContent = "";
+  if (uploadStatus) {
+    uploadStatus.textContent = "Paste text remains the fastest fallback. Uploaded files are only used to extract text and are not stored.";
+  }
   resetScanState();
+});
+
+resumeFileInput?.addEventListener("change", () => {
+  extractResumeText(resumeFileInput.files?.[0]);
 });
 
 resumeInput.addEventListener("input", () => {

@@ -9,208 +9,696 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
-/**
- * ATS-style resume/JD match scoring.
- *
- * <p>The score is a <b>weighted coverage</b> figure, not a token-frequency heuristic. Each
- * requirement detected in the job description (a curated skill or a salient term/phrase) is given
- * a weight based on how strongly the JD asks for it (required &gt; neutral &gt; nice-to-have).
- * The score is the share of total requirement weight that the resume actually covers. Matching is
- * word-boundary + lightly stemmed on both sides, so {@code test/testing/tested} unify and there
- * are no cross-word substring false positives (e.g. "api" inside "rapid").
- *
- * <p>This logic is mirrored byte-for-byte in {@code app.js} {@code analyzeLocally()} so the browser
- * fallback and the backend agree within a point or two.
- */
 @Service
 public class AnalysisService {
-    /** Free-preview cap for the missing list; the score summary cites at most this many. */
     static final int FREE_MISSING_LIMIT = 5;
 
-    // Requirement weights.
-    private static final double W_SKILL_REQUIRED = 3.0;
-    private static final double W_SKILL_NEUTRAL = 2.0;
-    private static final double W_SKILL_PREFERRED = 1.0;
-    private static final double W_KEYWORD_REQUIRED = 1.5;
-    private static final double W_KEYWORD_NEUTRAL = 1.0;
-    private static final double W_KEYWORD_PREFERRED = 0.5;
+    private static final Pattern PRIVATE_MARKER = Pattern.compile(
+            "(do[_-]?not[_-]?store|beta[_-]?canary|canary|resume[_-]?marker|jd[_-]?marker)[a-z0-9_-]*",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern METRIC_PATTERN = Pattern.compile(
+            "(\\d+\\s*(%|ms|s|sec|secs|seconds|users|requests|rps|qps|minutes|hours|days)|latency|uptime|cost|defects|scale|performance|throughput|reduced|improved|optimized)",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern YEARS_PATTERN = Pattern.compile("(\\d+)\\s*(?:\\+|to|-)?\\s*(\\d+)?\\s*\\+?\\s*years?");
 
-    private static final int MAX_KEYWORD_UNIGRAMS = 12;
-    private static final int MAX_KEYWORD_BIGRAMS = 6;
-    private static final int MAX_KEYWORD_REQUIREMENTS = 10;
-
-    private static final List<Skill> SKILLS = Arrays.asList(
-            new Skill("Java", "java", "core java", "jdk"),
-            new Skill("Kotlin", "kotlin"),
-            new Skill("Spring Boot", "spring boot", "springboot"),
-            new Skill("Spring MVC", "spring mvc", "spring web"),
-            new Skill("Spring Security", "spring security", "oauth", "jwt"),
-            new Skill("Reactive/WebFlux", "webflux", "reactive", "project reactor"),
-            new Skill("REST APIs", "rest", "rest api", "restful"),
-            new Skill("GraphQL", "graphql"),
-            new Skill("gRPC", "grpc"),
-            new Skill("Microservices", "microservice", "microservices"),
-            new Skill("Hibernate/JPA", "hibernate", "jpa", "spring data"),
-            new Skill("SQL", "sql", "mysql", "postgres", "postgresql", "oracle"),
-            new Skill("NoSQL", "mongodb", "redis", "dynamodb", "cassandra"),
-            new Skill("Elasticsearch", "elasticsearch", "elk"),
-            new Skill("Kafka", "kafka", "event streaming"),
-            new Skill("RabbitMQ", "rabbitmq", "message queue"),
-            new Skill("Docker", "docker", "container"),
-            new Skill("Kubernetes", "kubernetes", "k8s"),
-            new Skill("AWS", "aws", "ec2", "s3", "lambda", "cloudwatch"),
-            new Skill("Azure", "azure"),
-            new Skill("GCP", "gcp", "google cloud"),
-            new Skill("Terraform/IaC", "terraform", "iac"),
-            new Skill("CI/CD", "ci/cd", "jenkins", "github actions", "gitlab ci"),
-            new Skill("JUnit", "junit", "unit testing"),
-            new Skill("Mockito", "mockito"),
-            new Skill("Maven/Gradle", "maven", "gradle"),
-            new Skill("Git", "git", "github", "gitlab", "bitbucket"),
-            new Skill("Design Patterns", "design pattern", "design patterns"),
-            new Skill("DSA", "data structure", "data structures", "algorithm", "algorithms", "dsa"),
-            new Skill("System Design", "system design", "scalable", "distributed"),
-            new Skill("Agile", "agile", "scrum", "jira"),
-            new Skill("Observability", "logging", "monitoring", "prometheus", "grafana"));
+    private static final List<String> REQUIRED_CUES = Arrays.asList(
+            "required", "must", "mandatory", "strong", "expertise", "proficient", "hands-on",
+            "hands on", "minimum", "essential", "solid", "deep", "advanced", "at least");
+    private static final List<String> PREFERRED_CUES = Arrays.asList(
+            "preferred", "nice to have", "nice-to-have", "bonus", "plus", "good to have",
+            "exposure", "familiarity", "desirable", "desired", "optional", "advantage");
+    private static final List<String> RESPONSIBILITY_CUES = Arrays.asList(
+            "build", "design", "develop", "maintain", "optimize", "troubleshoot", "deploy",
+            "collaborate", "own", "debug", "support", "review", "monitor");
+    private static final List<String> ACTION_VERBS = Arrays.asList(
+            "built", "build", "designed", "developed", "implemented", "optimized", "improved",
+            "reduced", "migrated", "maintained", "debugged", "tested", "deployed", "owned",
+            "led", "created", "integrated", "documented", "supported", "reviewed");
+    private static final List<String> CONTEXT_WORDS = Arrays.asList(
+            "api", "service", "workflow", "query", "database", "test", "deployment", "customer",
+            "production", "latency", "validation", "exception", "transaction", "consumer",
+            "endpoint", "pipeline", "dashboard", "monitoring");
 
     private static final Set<String> STOP_WORDS = new LinkedHashSet<>(Arrays.asList(
             "and", "the", "for", "with", "you", "are", "will", "this", "that", "from", "have",
-            "has", "had", "our", "your", "job", "role", "roles", "work", "working", "team", "teams",
-            "experience", "experiences", "candidate", "candidates", "developer", "developers",
-            "engineer", "engineers", "software", "good", "great", "strong", "using", "use", "used",
-            "build", "building", "built", "ability", "able", "year", "years", "month", "months",
-            "looking", "join", "joining", "responsibilities", "responsibility", "requirement",
-            "requirements", "required", "require", "must", "plus", "etc", "including", "include",
-            "includes", "such", "who", "what", "when", "where", "which", "how", "why", "they",
-            "them", "their", "its", "into", "onto", "over", "under", "about", "across", "within",
-            "would", "should", "could", "can", "may", "might", "well", "also", "more", "most",
-            "some", "any", "all", "one", "two", "three", "new", "help", "helping", "make", "making",
-            "get", "getting", "want", "need", "needs", "needed", "like", "via", "per", "out", "off",
-            "but", "not", "yet", "than", "then", "too", "very", "just", "now", "day", "days",
-            "knowledge", "understanding", "familiarity", "hands", "based", "level", "part", "full",
-            "time", "company", "companies", "product", "products", "service", "services", "system",
-            "systems", "application", "applications", "skill", "skills", "tool", "tools",
-            "technology", "technologies", "environment", "environments", "opportunity", "people",
-            "world", "every", "across", "ensure", "deliver", "delivering", "support", "supporting",
-            "canary", "resume", "resumes", "marker", "markers"));
+            "has", "had", "our", "your", "job", "role", "roles", "work", "working", "team",
+            "teams", "experience", "experiences", "candidate", "candidates", "developer",
+            "developers", "engineer", "engineers", "software", "good", "great", "strong",
+            "using", "use", "used", "ability", "able", "year", "years", "month", "months",
+            "looking", "join", "joining", "project", "projects", "available", "availability",
+            "become", "becomes", "became", "get", "getting", "want", "needs", "needed", "core",
+            "responsibility", "responsibilities", "requirement", "requirements", "required",
+            "require", "must", "plus", "etc", "including", "include", "includes", "such", "who",
+            "what", "when", "where", "which", "how", "why", "they", "them", "their", "its", "into",
+            "onto", "over", "under", "about", "across", "within", "would", "should", "could",
+            "can", "may", "might", "well", "also", "more", "most", "some", "any", "all", "one",
+            "two", "three", "new", "help", "helping", "make", "making", "need", "like", "via",
+            "per", "out", "off", "but", "not", "yet", "than", "then", "too", "very", "just",
+            "now", "day", "days", "company", "companies", "product", "products", "service",
+            "services", "system", "systems", "application", "applications", "skill", "skills",
+            "tool", "tools", "technology", "technologies", "environment", "environments",
+            "opportunity", "people", "world", "every", "ensure", "deliver", "delivering",
+            "support", "supporting", "knowledge", "understanding", "familiarity", "hands",
+            "based", "level", "part", "full", "time", "resume", "resumes", "marker", "markers"));
 
-    // Sentence-level cues used to weight requirements as required vs nice-to-have.
-    private static final List<String> REQUIRED_CUES = Arrays.asList(
-            "required", "require", "must", "must-have", "must have", "strong", "proficient",
-            "proficiency", "expertise", "expert", "essential", "essentials", "minimum", "at least",
-            "solid", "deep", "advanced", "mandatory", "extensive", "hands-on", "hands on");
-    private static final List<String> PREFERRED_CUES = Arrays.asList(
-            "plus", "nice to have", "nice-to-have", "preferred", "prefer", "bonus", "good to have",
-            "advantage", "desirable", "desired", "ideally", "optional", "familiarity", "exposure",
-            "a plus", "would be", "is a plus", "are a plus");
+    private static final List<SkillSpec> SKILLS = Arrays.asList(
+            skill("Java", "Core Java", 1.0, "java", "core java", "jdk"),
+            skill("OOP", "Core Java", 0.75, "oop", "object oriented", "object-oriented"),
+            skill("Collections", "Core Java", 0.7, "collections", "collection framework"),
+            skill("Streams", "Core Java", 0.7, "streams", "stream api", "java streams"),
+            skill("Concurrency", "Core Java", 0.8, "concurrency", "multithreading", "multi threading", "threads"),
+            skill("JVM", "Core Java", 0.65, "jvm", "memory management", "garbage collection"),
+            skill("Exceptions", "Core Java", 0.55, "exceptions", "exception handling"),
+            skill("Spring Boot", "Spring", 1.0, "spring boot", "springboot"),
+            skill("Spring MVC", "Spring", 0.85, "spring mvc", "spring web"),
+            skill("Spring Security", "Spring", 0.85, "spring security", "oauth", "jwt"),
+            skill("Spring Data JPA", "Spring", 0.85, "spring data jpa", "spring data"),
+            skill("Spring Cloud", "Spring", 0.65, "spring cloud"),
+            skill("WebFlux", "Spring", 0.55, "webflux", "reactive", "project reactor"),
+            skill("REST APIs", "APIs", 1.0, "rest api", "rest apis", "restful", "restful services", "rest"),
+            skill("GraphQL", "APIs", 0.55, "graphql"),
+            skill("gRPC", "APIs", 0.55, "grpc", "gRPC"),
+            skill("OpenAPI/Swagger", "APIs", 0.55, "openapi", "swagger"),
+            skill("API versioning", "APIs", 0.45, "api versioning", "versioned api"),
+            skill("SQL", "Database", 1.0, "sql"),
+            skill("MySQL", "Database", 0.65, "mysql"),
+            skill("PostgreSQL", "Database", 0.75, "postgresql", "postgres"),
+            skill("Oracle", "Database", 0.55, "oracle"),
+            skill("Hibernate/JPA", "Database", 0.95, "hibernate", "jpa", "spring data jpa"),
+            skill("JDBC", "Database", 0.45, "jdbc"),
+            skill("Transactions", "Database", 0.65, "transactions", "transaction management"),
+            skill("Indexing", "Database", 0.55, "indexing", "indexes"),
+            skill("Query optimization", "Database", 0.7, "query optimization", "query tuning"),
+            skill("MongoDB", "Database", 0.5, "mongodb", "mongo"),
+            skill("Redis", "Database", 0.5, "redis"),
+            skill("JUnit", "Testing", 0.85, "junit", "unit testing"),
+            skill("Mockito", "Testing", 0.75, "mockito"),
+            skill("Integration testing", "Testing", 0.7, "integration testing", "integration tests"),
+            skill("Testcontainers", "Testing", 0.55, "testcontainers"),
+            skill("TDD", "Testing", 0.45, "tdd", "test driven"),
+            skill("Kafka", "Messaging", 0.85, "kafka", "apache kafka"),
+            skill("RabbitMQ", "Messaging", 0.55, "rabbitmq"),
+            skill("JMS", "Messaging", 0.45, "jms"),
+            skill("Event-driven architecture", "Messaging", 0.65, "event driven", "event-driven architecture"),
+            skill("Docker", "DevOps/Cloud", 0.8, "docker", "containerized", "container"),
+            skill("Kubernetes", "DevOps/Cloud", 0.75, "kubernetes", "k8s"),
+            skill("AWS", "DevOps/Cloud", 0.75, "aws", "ec2", "s3", "lambda", "cloudwatch"),
+            skill("Azure", "DevOps/Cloud", 0.55, "azure"),
+            skill("GCP", "DevOps/Cloud", 0.55, "gcp", "google cloud"),
+            skill("CI/CD", "DevOps/Cloud", 0.8, "ci/cd", "jenkins", "github actions", "gitlab ci"),
+            skill("Maven", "DevOps/Cloud", 0.55, "maven"),
+            skill("Gradle", "DevOps/Cloud", 0.55, "gradle"),
+            skill("Microservices", "Architecture", 0.9, "microservice", "microservices"),
+            skill("System design", "Architecture", 0.75, "system design"),
+            skill("Distributed systems", "Architecture", 0.75, "distributed systems", "distributed"),
+            skill("Design patterns", "Architecture", 0.6, "design patterns", "design pattern"),
+            skill("Scalability", "Architecture", 0.6, "scalability", "scalable"),
+            skill("Observability", "Architecture", 0.65, "observability", "logging", "monitoring"),
+            skill("Prometheus", "Architecture", 0.5, "prometheus"),
+            skill("Grafana", "Architecture", 0.5, "grafana"),
+            skill("Git", "Tools/Process", 0.65, "git", "github", "gitlab", "bitbucket"),
+            skill("Agile/Scrum", "Tools/Process", 0.55, "agile", "scrum", "jira"),
+            skill("Code review", "Tools/Process", 0.55, "code review", "pull request"),
+            skill("Production support", "Tools/Process", 0.65, "production support", "prod support"),
+            skill("Debugging", "Tools/Process", 0.65, "debugging", "troubleshooting", "root cause"));
+
+    private static SkillSpec skill(String label, String category, double importance, String... aliases) {
+        return new SkillSpec(label, category, importance, Arrays.asList(aliases));
+    }
 
     public AnalysisResult analyze(String resumeText, String jobDescription, String experienceLevel) {
-        String resume = normalize(resumeText);
-        String job = normalize(jobDescription);
-        List<String> segments = segments(jobDescription);
-
-        Set<String> resumeUnigrams = stemmedUnigrams(resume);
-        Set<String> resumeBigrams = stemmedBigrams(segments(resumeText));
-
-        // ---- Skill requirements ----
-        List<Requirement> skillReqs = new ArrayList<>();
-        Set<String> skillTermStems = new LinkedHashSet<>();
-        for (Skill skill : SKILLS) {
-            for (String stem : skill.stemmedTerms()) {
-                skillTermStems.add(stem);
-            }
-            if (skill.isPresentIn(job)) {
-                Weight weight = classify(segments, seg -> skill.isPresentIn(seg));
-                boolean covered = skill.isPresentIn(resume);
-                skillReqs.add(new Requirement(skill.getLabel(), skillWeight(weight), covered));
-            }
+        String resume = safeText(resumeText);
+        String job = safeText(jobDescription);
+        String normalizedResume = normalize(resume);
+        String normalizedJob = normalize(job);
+        if (normalizedJob.isBlank()) {
+            return emptyResult();
         }
 
-        // ---- Keyword requirements (deduped against skills) ----
-        List<Requirement> keywordReqs = keywordRequirements(
-                job, segments, resumeUnigrams, resumeBigrams, skillTermStems);
+        ResumeProfile profile = parseResume(resume);
+        List<String> jobSegments = segments(job);
+        List<Requirement> skillRequirements = extractSkillRequirements(normalizedJob, jobSegments, profile);
+        List<KeywordRequirement> keywordRequirements = extractKeywordRequirements(job, profile, skillRequirements);
 
-        // ---- Weighted-coverage score ----
-        double totalWeight = 0;
-        double coveredWeight = 0;
-        for (Requirement r : skillReqs) {
-            totalWeight += r.weight;
-            if (r.covered) {
-                coveredWeight += r.weight;
-            }
-        }
-        for (Requirement r : keywordReqs) {
-            totalWeight += r.weight;
-            if (r.covered) {
-                coveredWeight += r.weight;
-            }
-        }
-        int score;
-        if (totalWeight <= 0) {
-            score = 0;
-        } else {
-            int raw = (int) Math.round((coveredWeight / totalWeight) * 100);
-            score = Math.max(5, Math.min(99, raw));
-        }
+        ScoreBreakdown breakdown = new ScoreBreakdown(
+                component(skillRequirements, RequirementType.REQUIRED, 30, true),
+                preferredScore(skillRequirements),
+                keywordScore(keywordRequirements),
+                evidenceScore(skillRequirements),
+                seniorityScore(job, experienceLevel),
+                impactScore(profile),
+                readabilityScore(profile));
 
-        // ---- Display lists ----
-        List<String> matched = skillReqs.stream()
-                .filter(r -> r.covered)
-                .map(r -> r.label)
+        int rawScore = breakdown.getMustHaveScore()
+                + breakdown.getPreferredScore()
+                + breakdown.getKeywordScore()
+                + breakdown.getEvidenceScore()
+                + breakdown.getSeniorityScore()
+                + breakdown.getImpactScore()
+                + breakdown.getReadabilityScore();
+        int score = applyScoreCaps(rawScore, profile, skillRequirements, normalizedJob, normalizedResume);
+
+        List<Requirement> matchedReqs = skillRequirements.stream()
+                .filter(Requirement::isCovered)
+                .sorted(Comparator.comparing((Requirement r) -> r.evidenceLevel).reversed()
+                        .thenComparing(r -> -r.weight))
                 .collect(Collectors.toList());
-        List<String> missingSkills = skillReqs.stream()
-                .filter(r -> !r.covered)
-                .map(r -> r.label)
+        List<Requirement> missingReqs = skillRequirements.stream()
+                .filter(r -> !r.isCovered())
+                .sorted(Comparator.comparing((Requirement r) -> r.type).thenComparing(r -> -r.weight))
                 .collect(Collectors.toList());
 
-        List<String> missingKeywords = new ArrayList<>(missingSkills);
-        Set<String> missingKeys = missingKeywords.stream()
-                .map(value -> value.toLowerCase(Locale.ROOT))
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-        for (Requirement r : keywordReqs) {
-            if (missingKeywords.size() >= 8) {
-                break;
-            }
-            if (!r.covered && missingKeys.add(r.label.toLowerCase(Locale.ROOT))) {
-                missingKeywords.add(r.label);
-            }
-        }
-
-        int shownMissing = Math.min(missingKeywords.size(), FREE_MISSING_LIMIT);
+        List<String> matched = matchedReqs.stream()
+                .map(r -> r.label + evidenceSuffix(r.evidenceLevel))
+                .limit(8)
+                .collect(Collectors.toList());
+        List<String> missing = missingKeywords(missingReqs, keywordRequirements);
+        List<String> topFixes = buildTopFixes(missingReqs, keywordRequirements, profile, experienceLevel);
+        List<String> bullets = buildBullets(matchedReqs, missingReqs, experienceLevel);
+        List<String> questions = buildQuestions(missingReqs, matchedReqs, experienceLevel);
+        List<String> plan = buildPlan(missingReqs, matchedReqs, experienceLevel);
 
         return new AnalysisResult(
                 score,
-                buildScoreSummary(score, matched, shownMissing),
+                buildScoreSummary(score, matchedReqs, missingReqs, skillRequirements, profile),
                 matched.isEmpty()
-                        ? Arrays.asList("No major Java job keywords matched yet. Add truthful skills, projects, and tools from your actual experience.")
-                        : matched,
-                missingKeywords.isEmpty()
-                        ? Arrays.asList("No obvious gaps from this job description. Focus on proof, numbers, and interview storytelling.")
-                        : missingKeywords,
-                buildTopFixes(missingKeywords, matched, experienceLevel),
-                buildBullets(matched, missingSkills, experienceLevel),
-                buildQuestions(missingSkills, matched, experienceLevel),
-                buildPlan(missingSkills, matched, experienceLevel));
+                        ? Arrays.asList("No major Java job keywords matched yet. Add truthful Java/backend evidence from projects or experience.")
+                        : sanitizeList(matched),
+                missing.isEmpty()
+                        ? Arrays.asList("No obvious keyword gaps from this job description. Focus on proof, metrics, and interview stories.")
+                        : sanitizeList(missing),
+                sanitizeList(topFixes),
+                sanitizeList(bullets),
+                sanitizeList(questions),
+                sanitizeList(plan),
+                breakdown);
     }
 
-    // ---------------------------------------------------------------------
-    // Text processing
-    // ---------------------------------------------------------------------
+    private AnalysisResult emptyResult() {
+        ScoreBreakdown breakdown = new ScoreBreakdown(0, 0, 0, 0, 0, 0, 0);
+        return new AnalysisResult(
+                0,
+                "Paste a target Java job description to calculate an ATS-style score.",
+                Arrays.asList("No job description keywords were provided."),
+                Arrays.asList("Paste the target Java/Spring Boot job description."),
+                Arrays.asList("Paste a complete Java/Spring Boot job description before analyzing."),
+                Arrays.asList("Add truthful Java backend project or work evidence once a target JD is available."),
+                Arrays.asList("Which Java/Spring Boot topics does the target job require?"),
+                Arrays.asList("Day 1: Paste a target job description and rerun the scan."),
+                breakdown);
+    }
+
+    private List<Requirement> extractSkillRequirements(String normalizedJob, List<String> jobSegments, ResumeProfile profile) {
+        List<Requirement> requirements = new ArrayList<>();
+        for (SkillSpec skill : SKILLS) {
+            if (!skill.isPresentIn(normalizedJob)) {
+                continue;
+            }
+            RequirementType type = classify(jobSegments, segment -> skill.isPresentIn(segment));
+            EvidenceLevel evidenceLevel = profile.evidenceFor(skill);
+            requirements.add(new Requirement(
+                    skill.label,
+                    skill.category,
+                    type,
+                    skill.importance * type.weight,
+                    evidenceLevel));
+        }
+        return dedupeByLabel(requirements);
+    }
+
+    private List<Requirement> dedupeByLabel(List<Requirement> requirements) {
+        Map<String, Requirement> byLabel = new LinkedHashMap<>();
+        for (Requirement requirement : requirements) {
+            Requirement existing = byLabel.get(requirement.label);
+            if (existing == null || requirement.weight > existing.weight || requirement.evidenceLevel.ordinal() > existing.evidenceLevel.ordinal()) {
+                byLabel.put(requirement.label, requirement);
+            }
+        }
+        return new ArrayList<>(byLabel.values());
+    }
+
+    private List<KeywordRequirement> extractKeywordRequirements(
+            String jobDescription,
+            ResumeProfile profile,
+            List<Requirement> skillRequirements) {
+        Set<String> skillStems = skillRequirements.stream()
+                .flatMap(requirement -> requirement.label.toLowerCase(Locale.ROOT).contains("/")
+                        ? Arrays.stream(requirement.label.toLowerCase(Locale.ROOT).split("[^a-z0-9+#]+")).map(AnalysisService::stem)
+                        : Arrays.stream(requirement.label.toLowerCase(Locale.ROOT).split("[^a-z0-9+#]+")).map(AnalysisService::stem))
+                .filter(stem -> stem.length() > 1)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        List<String> jobSegments = segments(jobDescription);
+        Map<String, Integer> phraseFreq = new LinkedHashMap<>();
+        Map<String, String> phraseLabel = new LinkedHashMap<>();
+        Map<String, Integer> tokenFreq = new LinkedHashMap<>();
+        Map<String, String> tokenLabel = new LinkedHashMap<>();
+
+        for (String segment : jobSegments) {
+            List<String> tokens = contentTokens(segment);
+            for (String token : tokens) {
+                String stem = stem(token);
+                tokenFreq.merge(stem, 1, Integer::sum);
+                tokenLabel.putIfAbsent(stem, token);
+            }
+            for (int n = 2; n <= 3; n++) {
+                for (int i = 0; i + n <= tokens.size(); i++) {
+                    String phrase = String.join(" ", tokens.subList(i, i + n));
+                    String phraseStem = tokens.subList(i, i + n).stream().map(AnalysisService::stem).collect(Collectors.joining(" "));
+                    phraseFreq.merge(phraseStem, 1, Integer::sum);
+                    phraseLabel.putIfAbsent(phraseStem, phrase);
+                }
+            }
+        }
+
+        List<KeywordRequirement> output = new ArrayList<>();
+        Set<String> used = new LinkedHashSet<>(skillStems);
+        for (String key : topByFrequency(phraseFreq, 8)) {
+            if (output.size() >= 10 || phraseMostlySkill(key, skillStems) || !used.add(key)) {
+                continue;
+            }
+            String label = phraseLabel.get(key);
+            RequirementType type = classify(jobSegments, segment -> segment.contains(label));
+            output.add(new KeywordRequirement(label, type, profile.containsPhrase(label)));
+        }
+        for (String key : topByFrequency(tokenFreq, 8)) {
+            if (output.size() >= 12 || skillStems.contains(key) || !used.add(key)) {
+                continue;
+            }
+            String label = tokenLabel.get(key);
+            RequirementType type = classify(jobSegments, segment -> segment.contains(label));
+            output.add(new KeywordRequirement(label, type, profile.containsStem(key)));
+        }
+        return output;
+    }
+
+    private boolean phraseMostlySkill(String phraseStem, Set<String> skillStems) {
+        List<String> stems = Arrays.stream(phraseStem.split("\\s+"))
+                .filter(stem -> !stem.isBlank())
+                .collect(Collectors.toList());
+        if (stems.size() < 2) {
+            return false;
+        }
+        long skillCount = stems.stream().filter(skillStems::contains).count();
+        return skillCount >= Math.max(2, stems.size() - 1);
+    }
+
+    private int component(List<Requirement> requirements, RequirementType type, int max, boolean fallbackWhenMissing) {
+        List<Requirement> scoped = requirements.stream()
+                .filter(r -> r.type == type)
+                .collect(Collectors.toList());
+        if (scoped.isEmpty() && fallbackWhenMissing) {
+            scoped = requirements.stream()
+                    .filter(r -> r.type == RequirementType.RESPONSIBILITY || r.type == RequirementType.NEUTRAL)
+                    .collect(Collectors.toList());
+        }
+        if (scoped.isEmpty()) {
+            return fallbackWhenMissing ? max - 3 : max;
+        }
+        double total = scoped.stream().mapToDouble(r -> r.weight).sum();
+        double covered = scoped.stream()
+                .filter(Requirement::isCovered)
+                .mapToDouble(r -> r.weight)
+                .sum();
+        return clamp((int) Math.round((covered / total) * max), 0, max);
+    }
+
+    private int keywordScore(List<KeywordRequirement> requirements) {
+        if (requirements.isEmpty()) {
+            return 12;
+        }
+        double total = 0;
+        double covered = 0;
+        for (KeywordRequirement requirement : requirements) {
+            total += requirement.type.keywordWeight;
+            if (requirement.covered) {
+                covered += requirement.type.keywordWeight;
+            }
+        }
+        return clamp((int) Math.round((covered / total) * 15), 0, 15);
+    }
+
+    private int preferredScore(List<Requirement> requirements) {
+        List<Requirement> scoped = requirements.stream()
+                .filter(r -> r.type == RequirementType.PREFERRED)
+                .collect(Collectors.toList());
+        if (scoped.isEmpty()) {
+            return 10;
+        }
+        double total = scoped.stream().mapToDouble(r -> r.weight).sum();
+        double covered = scoped.stream().filter(Requirement::isCovered).mapToDouble(r -> r.weight).sum();
+        return 7 + clamp((int) Math.round((covered / Math.max(total, 0.1)) * 3), 0, 3);
+    }
+
+    private int evidenceScore(List<Requirement> requirements) {
+        List<Requirement> covered = requirements.stream().filter(Requirement::isCovered).collect(Collectors.toList());
+        if (covered.isEmpty()) {
+            return 0;
+        }
+        double score = 0;
+        for (Requirement requirement : covered) {
+            switch (requirement.evidenceLevel) {
+                case STRONG:
+                    score += 1.0;
+                    break;
+                case MEDIUM:
+                    score += 0.62;
+                    break;
+                case WEAK:
+                    score += 0.35;
+                    break;
+                default:
+                    break;
+            }
+        }
+        return clamp((int) Math.round((score / covered.size()) * 20), 0, 20);
+    }
+
+    private int seniorityScore(String jobDescription, String experienceLevel) {
+        YearRange jdRange = detectYears(jobDescription);
+        if (!jdRange.present) {
+            return 9;
+        }
+        YearRange selected = selectedRange(experienceLevel);
+        if (selected.max < jdRange.min) {
+            return selected.max + 1 < jdRange.min ? 3 : 5;
+        }
+        if (selected.min > jdRange.max + 2) {
+            return 8;
+        }
+        return 10;
+    }
+
+    private int impactScore(ResumeProfile profile) {
+        int metricLines = 0;
+        for (String line : profile.experienceProjectLines()) {
+            if (METRIC_PATTERN.matcher(line).find()) {
+                metricLines++;
+            }
+        }
+        return clamp(metricLines * 2, 0, 5);
+    }
+
+    private int readabilityScore(ResumeProfile profile) {
+        int score = 0;
+        int length = profile.original.length();
+        if (length >= 500) {
+            score += 3;
+        } else if (length >= 280) {
+            score += 2;
+        }
+        if (profile.hasSection("skills")) {
+            score += 1;
+        }
+        if (profile.hasSection("experience") || profile.hasSection("work experience")) {
+            score += 2;
+        }
+        if (profile.hasSection("projects")) {
+            score += 1;
+        }
+        if (profile.bulletCount >= 3) {
+            score += 2;
+        } else if (profile.bulletCount > 0) {
+            score += 1;
+        }
+        if (!profile.hasWeirdSymbolNoise()) {
+            score += 1;
+        }
+        if (profile.keywordStuffed) {
+            score -= 3;
+        }
+        return clamp(score, 0, 10);
+    }
+
+    private int applyScoreCaps(
+            int score,
+            ResumeProfile profile,
+            List<Requirement> requirements,
+            String normalizedJob,
+            String normalizedResume) {
+        int capped = clamp(score, 0, 99);
+        if (profile.original.length() < 160) {
+            capped = Math.min(capped, 45);
+        }
+        if (containsJavaRequirement(normalizedJob) && !containsJavaRequirement(normalizedResume)) {
+            capped = Math.min(capped, 55);
+        }
+        if (containsSpringBootRequirement(normalizedJob) && !containsSpringBootRequirement(normalizedResume)) {
+            capped = Math.min(capped, 65);
+        }
+        long missingRequiredBackend = requirements.stream()
+                .filter(r -> r.type == RequirementType.REQUIRED)
+                .filter(r -> !r.isCovered())
+                .filter(r -> !"Tools/Process".equals(r.category))
+                .count();
+        if (missingRequiredBackend >= 2) {
+            capped = Math.min(capped, 75);
+        }
+        List<Requirement> covered = requirements.stream().filter(Requirement::isCovered).collect(Collectors.toList());
+        long weakOnly = covered.stream().filter(r -> r.evidenceLevel == EvidenceLevel.WEAK).count();
+        if (!covered.isEmpty() && weakOnly > covered.size() / 2) {
+            capped = Math.min(capped, 80);
+        }
+        if (profile.keywordStuffed) {
+            capped = Math.min(capped, 70);
+        }
+        return capped;
+    }
+
+    private boolean containsJavaRequirement(String text) {
+        return Pattern.compile("(^|[^a-z0-9])java([^a-z0-9]|$)").matcher(text).find()
+                || text.contains("core java");
+    }
+
+    private boolean containsSpringBootRequirement(String text) {
+        return text.contains("spring boot") || text.contains("springboot");
+    }
+
+    private List<String> missingKeywords(List<Requirement> missingReqs, List<KeywordRequirement> keywordReqs) {
+        List<String> output = new ArrayList<>();
+        for (Requirement requirement : missingReqs) {
+            if (output.size() >= 8) {
+                break;
+            }
+            output.add(requirement.label + " — add truthful proof in an " + placementFor(requirement));
+        }
+        for (KeywordRequirement keyword : keywordReqs) {
+            if (output.size() >= 8) {
+                break;
+            }
+            if (!keyword.covered && output.stream().noneMatch(value -> value.toLowerCase(Locale.ROOT).contains(keyword.label.toLowerCase(Locale.ROOT)))) {
+                output.add(keyword.label + " — mention in a summary or project bullet if true");
+            }
+        }
+        return output;
+    }
+
+    private String placementFor(Requirement requirement) {
+        if (requirement.type == RequirementType.REQUIRED || requirement.type == RequirementType.RESPONSIBILITY) {
+            return "Experience or Projects bullet";
+        }
+        if ("Core Java".equals(requirement.category) || "Tools/Process".equals(requirement.category)) {
+            return "Skills section plus one proof bullet";
+        }
+        return "Project bullet";
+    }
+
+    private List<String> buildTopFixes(
+            List<Requirement> missingReqs,
+            List<KeywordRequirement> keywordReqs,
+            ResumeProfile profile,
+            String experienceLevel) {
+        List<String> fixes = new ArrayList<>();
+        missingReqs.stream()
+                .filter(r -> r.type == RequirementType.REQUIRED)
+                .findFirst()
+                .ifPresent(r -> fixes.add("Add " + r.label + " project evidence in your Experience or Projects section, not only the Skills list."));
+        if (missingReqs.stream().anyMatch(r -> r.label.toLowerCase(Locale.ROOT).contains("rest"))) {
+            fixes.add("Add one REST API bullet with endpoint design, validation, error handling, and database persistence.");
+        }
+        if (missingReqs.stream().anyMatch(r -> r.label.toLowerCase(Locale.ROOT).contains("junit") || r.label.toLowerCase(Locale.ROOT).contains("mockito"))) {
+            fixes.add("If true, mention JUnit/Mockito testing coverage for one service-layer flow.");
+        }
+        if (missingReqs.stream().anyMatch(r -> r.category.equals("Database"))) {
+            fixes.add("Add SQL/JPA proof with query optimization, transactions, schema design, or repository work.");
+        }
+        if (profile.impactScoreHint() == 0) {
+            fixes.add("Add one measurable impact bullet with %, latency, defects, users, requests, cost, or performance context.");
+        }
+        if (fixes.isEmpty()) {
+            fixes.add("Keep your strongest Java/Spring evidence visible near the top and connect it to the target job.");
+        }
+        fixes.add("Rewrite your summary for a " + copyFor(experienceLevel).role + " role using only Java/backend skills you can defend.");
+        fixes.add("Move the most relevant Java, Spring Boot, database, testing, and deployment proof into the top half of the resume.");
+        fixes.add("Replace generic responsibility wording with action, technology, and result: built, optimized, tested, deployed, or debugged.");
+        return fixes.stream().distinct().limit(3).collect(Collectors.toList());
+    }
+
+    private List<String> buildBullets(List<Requirement> matched, List<Requirement> missing, String experienceLevel) {
+        List<String> bullets = new ArrayList<>();
+        String role = copyFor(experienceLevel).role;
+        List<String> strong = matched.stream()
+                .filter(r -> r.evidenceLevel == EvidenceLevel.STRONG)
+                .map(r -> r.label)
+                .limit(3)
+                .collect(Collectors.toList());
+        if (!strong.isEmpty()) {
+            bullets.add("Built Java backend features using " + String.join(", ", strong)
+                    + " with clear ownership, test coverage, and production-ready error handling.");
+        }
+        Requirement firstMissing = missing.isEmpty() ? null : missing.get(0);
+        if (firstMissing != null) {
+            bullets.add("If true, add a " + firstMissing.label + " bullet for a " + role
+                    + " role: describe the API/service, context, testing, and measurable result.");
+        }
+        bullets.add("Built Spring Boot REST APIs for customer onboarding with DTO validation, centralized exception handling, JPA persistence, and JUnit/Mockito service tests.");
+        return bullets;
+    }
+
+    private List<String> buildQuestions(List<Requirement> missing, List<Requirement> matched, String experienceLevel) {
+        List<String> questions = new ArrayList<>();
+        for (Requirement requirement : missing.stream().filter(r -> r.type == RequirementType.REQUIRED).limit(2).collect(Collectors.toList())) {
+            questions.add("The JD emphasizes " + requirement.label + ". Explain one real project where you used it, or how you would learn and apply it safely.");
+        }
+        if (matched.stream().anyMatch(r -> r.label.contains("Spring Boot")) || missing.stream().anyMatch(r -> r.label.contains("Spring Boot"))) {
+            questions.add("Explain how Spring Boot auto-configuration works and when you would override it.");
+        }
+        if (matched.stream().anyMatch(r -> r.label.contains("REST")) || missing.stream().anyMatch(r -> r.label.contains("REST"))) {
+            questions.add("How would you design a REST API with validation, error handling, pagination, and versioning?");
+        }
+        if (matched.stream().anyMatch(r -> r.label.contains("Kafka")) || missing.stream().anyMatch(r -> r.label.contains("Kafka"))) {
+            questions.add("How do Kafka consumer groups, offsets, partitions, retries, and dead-letter topics work?");
+        }
+        if ("senior".equals(experienceLevel) || "fiveToEight".equals(experienceLevel)) {
+            questions.add("Describe a backend architecture decision you led, including tradeoffs and production impact.");
+        }
+        questions.add("How would you debug a slow Java API in production without exposing user data?");
+        return questions.stream().distinct().limit(7).collect(Collectors.toList());
+    }
+
+    private List<String> buildPlan(List<Requirement> missing, List<Requirement> matched, String experienceLevel) {
+        String priority = missing.isEmpty()
+                ? "Spring Boot, REST APIs, SQL/JPA, testing, and debugging stories"
+                : missing.stream().limit(4).map(r -> r.label).collect(Collectors.joining(", "));
+        String strengths = matched.isEmpty()
+                ? "your strongest Java/backend projects"
+                : matched.stream().limit(3).map(r -> r.label).collect(Collectors.joining(", "));
+        return Arrays.asList(
+                "Day 1: Fix resume gaps for the must-have skills first: " + priority + ".",
+                "Day 2: Add one Experience or Projects bullet with action, Java/Spring context, and measurable impact.",
+                "Day 3: Prepare interview stories around matched strengths: " + strengths + ".",
+                "Day 4: Review Spring Boot REST API design, validation, exception handling, and DTO patterns.",
+                "Day 5: Review SQL/JPA transactions, query tuning, indexes, and common persistence pitfalls.",
+                "Day 6: Practice testing, debugging, CI/CD, Git, Docker, and production support questions.",
+                "Day 7: Run a mock interview using the JD stack and rewrite any weak resume bullets before applying.");
+    }
+
+    private String buildScoreSummary(
+            int score,
+            List<Requirement> matched,
+            List<Requirement> missing,
+            List<Requirement> allRequirements,
+            ResumeProfile profile) {
+        String strongest = matched.stream()
+                .collect(Collectors.groupingBy(r -> r.category, LinkedHashMap::new, Collectors.counting()))
+                .entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("Java/backend fundamentals");
+        String weakest = missing.stream()
+                .collect(Collectors.groupingBy(r -> r.category, LinkedHashMap::new, Collectors.counting()))
+                .entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("evidence depth");
+        String missingRequired = missing.stream()
+                .filter(r -> r.type == RequirementType.REQUIRED)
+                .map(r -> r.label)
+                .findFirst()
+                .orElse(missing.stream().map(r -> r.label).findFirst().orElse("no major must-have skill"));
+        String evidenceNote = profile.mostEvidenceWeak(allRequirements)
+                ? "Most matched skills appear in the Skills section, so add Experience or Project proof."
+                : "Your strongest matches have usable project or experience evidence.";
+
+        if (score >= 80) {
+            return "Strong Java/backend fit. Strongest area: " + strongest + ". Weakest area: " + weakest
+                    + ". Top gap: " + missingRequired + ". " + evidenceNote;
+        }
+        if (score >= 60) {
+            return "Moderate Java/backend fit. Strongest area: " + strongest + ". Weakest area: " + weakest
+                    + ". Top missing required skill: " + missingRequired + ". " + evidenceNote;
+        }
+        return "Low-to-moderate Java/backend fit for this JD. Strongest area: " + strongest
+                + ". Weakest area: " + weakest + ". Top missing required skill: " + missingRequired
+                + ". Add truthful Experience or Projects evidence before applying.";
+    }
+
+    private String evidenceSuffix(EvidenceLevel level) {
+        switch (level) {
+            case STRONG:
+                return " (project/experience evidence)";
+            case MEDIUM:
+                return " (summary evidence)";
+            case WEAK:
+                return " (skills-only evidence)";
+            default:
+                return "";
+        }
+    }
+
+    private RequirementType classify(List<String> segments, Predicate<String> matcher) {
+        boolean required = false;
+        boolean preferred = false;
+        boolean responsibility = false;
+        for (String segment : segments) {
+            if (!matcher.test(segment)) {
+                continue;
+            }
+            required |= containsCue(segment, REQUIRED_CUES);
+            preferred |= containsCue(segment, PREFERRED_CUES);
+            responsibility |= containsCue(segment, RESPONSIBILITY_CUES);
+        }
+        if (required) {
+            return RequirementType.REQUIRED;
+        }
+        if (preferred) {
+            return RequirementType.PREFERRED;
+        }
+        if (responsibility) {
+            return RequirementType.RESPONSIBILITY;
+        }
+        return RequirementType.NEUTRAL;
+    }
+
+    private boolean containsCue(String text, List<String> cues) {
+        for (String cue : cues) {
+            if (text.contains(cue)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private ResumeProfile parseResume(String resumeText) {
+        return new ResumeProfile(resumeText);
+    }
+
+    private String safeText(String text) {
+        return PRIVATE_MARKER.matcher(text == null ? "" : text).replaceAll(" ");
+    }
 
     private String normalize(String text) {
-        return text == null ? "" : text.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").trim();
+        return safeText(text).toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").trim();
     }
 
-    /** Lowercased sentence/line segments, used to detect required vs nice-to-have context. */
     private List<String> segments(String text) {
-        if (text == null) {
-            return new ArrayList<>();
-        }
-        String[] parts = text.toLowerCase(Locale.ROOT).split("[\\n\\.;:!?]+");
+        String[] parts = safeText(text).toLowerCase(Locale.ROOT).split("[\\n\\.;:!?]+");
         List<String> out = new ArrayList<>();
         for (String part : parts) {
             String trimmed = part.replaceAll("\\s+", " ").trim();
@@ -221,24 +709,17 @@ public class AnalysisService {
         return out;
     }
 
-    /** Content tokens in order: length &gt; 2, not a stop word, not purely numeric, edges trimmed. */
     private List<String> contentTokens(String text) {
         List<String> tokens = new ArrayList<>();
-        String cleaned = removePrivateMarkers(text);
-        for (String raw : cleaned.replaceAll("[^a-z0-9+#./-]", " ").split("\\s+")) {
-            String word = trimEdges(raw);
-            if (word.length() > 2 && !STOP_WORDS.contains(word) && !word.matches("[0-9]+")) {
-                tokens.add(word);
+        for (String raw : normalize(text).replaceAll("[^a-z0-9+#./-]", " ").split("\\s+")) {
+            String token = trimEdges(raw);
+            if (token.length() > 2 && !STOP_WORDS.contains(token) && !token.matches("[0-9]+")) {
+                tokens.add(token);
             }
         }
         return tokens;
     }
 
-    private String removePrivateMarkers(String text) {
-        return text.replaceAll("(do[_-]?not[_-]?store|beta[_-]?canary|canary)[a-z0-9_-]*", " ");
-    }
-
-    /** Strip leading/trailing separator punctuation while keeping internal ones (ci/cd, node.js). */
     private String trimEdges(String word) {
         int start = 0;
         int end = word.length();
@@ -255,33 +736,8 @@ public class AnalysisService {
         return c == '.' || c == '/' || c == '-';
     }
 
-    private Set<String> stemmedUnigrams(String normalized) {
-        Set<String> set = new LinkedHashSet<>();
-        for (String token : contentTokens(normalized)) {
-            set.add(stem(token));
-        }
-        return set;
-    }
-
-    /** Bigrams built WITHIN each segment so pairs never cross a sentence boundary. */
-    private Set<String> stemmedBigrams(List<String> segments) {
-        Set<String> set = new LinkedHashSet<>();
-        for (String segment : segments) {
-            List<String> tokens = contentTokens(segment);
-            for (int i = 0; i + 1 < tokens.size(); i++) {
-                set.add(stem(tokens.get(i)) + " " + stem(tokens.get(i + 1)));
-            }
-        }
-        return set;
-    }
-
-    /**
-     * Light, deterministic suffix stemmer. Linguistic precision is not the goal; the only
-     * requirement is that it produces the SAME stem for the resume side and the JD side (and that
-     * the JS port matches it exactly).
-     */
     static String stem(String word) {
-        String w = word;
+        String w = word == null ? "" : word.toLowerCase(Locale.ROOT);
         if (w.length() <= 3) {
             return w;
         }
@@ -299,72 +755,6 @@ public class AnalysisService {
         return w;
     }
 
-    // ---------------------------------------------------------------------
-    // Keyword requirement extraction
-    // ---------------------------------------------------------------------
-
-    private List<Requirement> keywordRequirements(
-            String job,
-            List<String> segments,
-            Set<String> resumeUnigrams,
-            Set<String> resumeBigrams,
-            Set<String> skillTermStems) {
-        List<String> tokens = contentTokens(job);
-
-        // Frequency by stem, keeping the first original token as the display label.
-        Map<String, Integer> unigramFreq = new LinkedHashMap<>();
-        Map<String, String> unigramLabel = new LinkedHashMap<>();
-        for (String token : tokens) {
-            String s = stem(token);
-            unigramFreq.merge(s, 1, Integer::sum);
-            unigramLabel.putIfAbsent(s, token);
-        }
-
-        Map<String, Integer> bigramFreq = new LinkedHashMap<>();
-        Map<String, String> bigramLabel = new LinkedHashMap<>();
-        for (String segment : segments) {
-            List<String> segTokens = contentTokens(segment);
-            for (int i = 0; i + 1 < segTokens.size(); i++) {
-                String s = stem(segTokens.get(i)) + " " + stem(segTokens.get(i + 1));
-                bigramFreq.merge(s, 1, Integer::sum);
-                bigramLabel.putIfAbsent(s, segTokens.get(i) + " " + segTokens.get(i + 1));
-            }
-        }
-
-        List<String> topUnigrams = topByFrequency(unigramFreq, MAX_KEYWORD_UNIGRAMS);
-        List<String> topBigrams = topByFrequency(bigramFreq, MAX_KEYWORD_BIGRAMS);
-
-        List<Requirement> reqs = new ArrayList<>();
-        Set<String> usedStems = new LinkedHashSet<>(skillTermStems);
-
-        for (String stem : topBigrams) {
-            if (reqs.size() >= MAX_KEYWORD_REQUIREMENTS) {
-                break;
-            }
-            if (!usedStems.add(stem)) {
-                continue;
-            }
-            String label = bigramLabel.get(stem);
-            boolean covered = resumeBigrams.contains(stem);
-            Weight weight = classify(segments, seg -> seg.contains(label));
-            reqs.add(new Requirement(label, keywordWeight(weight), covered));
-        }
-
-        for (String stem : topUnigrams) {
-            if (reqs.size() >= MAX_KEYWORD_REQUIREMENTS) {
-                break;
-            }
-            if (!usedStems.add(stem)) {
-                continue;
-            }
-            String label = unigramLabel.get(stem);
-            boolean covered = resumeUnigrams.contains(stem);
-            Weight weight = classify(segments, seg -> seg.contains(label));
-            reqs.add(new Requirement(label, keywordWeight(weight), covered));
-        }
-        return reqs;
-    }
-
     private List<String> topByFrequency(Map<String, Integer> freq, int limit) {
         return freq.entrySet().stream()
                 .sorted(Comparator.<Map.Entry<String, Integer>>comparingInt(Map.Entry::getValue)
@@ -375,218 +765,342 @@ public class AnalysisService {
                 .collect(Collectors.toList());
     }
 
-    // ---------------------------------------------------------------------
-    // Required / nice-to-have classification
-    // ---------------------------------------------------------------------
-
-    private interface SegmentMatcher {
-        boolean matches(String segment);
+    private int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
     }
 
-    private Weight classify(List<String> segments, SegmentMatcher matcher) {
-        boolean required = false;
-        boolean preferred = false;
-        for (String seg : segments) {
-            if (!matcher.matches(seg)) {
-                continue;
-            }
-            if (containsCue(seg, REQUIRED_CUES)) {
-                required = true;
-            }
-            if (containsCue(seg, PREFERRED_CUES)) {
-                preferred = true;
-            }
-        }
-        if (required) {
-            return Weight.REQUIRED;
-        }
-        if (preferred) {
-            return Weight.PREFERRED;
-        }
-        return Weight.NEUTRAL;
+    private List<String> sanitizeList(List<String> values) {
+        return values.stream()
+                .map(value -> PRIVATE_MARKER.matcher(value).replaceAll("").replaceAll("\\s+", " ").trim())
+                .filter(value -> !value.isBlank())
+                .collect(Collectors.toList());
     }
 
-    private boolean containsCue(String segment, List<String> cues) {
-        for (String cue : cues) {
-            if (segment.contains(cue)) {
-                return true;
-            }
+    private YearRange detectYears(String text) {
+        java.util.regex.Matcher matcher = YEARS_PATTERN.matcher(text.toLowerCase(Locale.ROOT));
+        if (!matcher.find()) {
+            return new YearRange(0, 99, false);
         }
-        return false;
+        int min = Integer.parseInt(matcher.group(1));
+        int max = matcher.group(2) == null ? min + 2 : Integer.parseInt(matcher.group(2));
+        if (text.substring(matcher.start(), matcher.end()).contains("+")) {
+            max = 99;
+        }
+        return new YearRange(min, max, true);
     }
 
-    private double skillWeight(Weight weight) {
-        switch (weight) {
-            case REQUIRED:
-                return W_SKILL_REQUIRED;
-            case PREFERRED:
-                return W_SKILL_PREFERRED;
+    private YearRange selectedRange(String experienceLevel) {
+        switch (experienceLevel == null ? "" : experienceLevel) {
+            case "fresher":
+                return new YearRange(0, 1, true);
+            case "threeToFive":
+                return new YearRange(3, 5, true);
+            case "fiveToEight":
+                return new YearRange(5, 8, true);
+            case "senior":
+            case "sixPlus":
+                return new YearRange(6, 99, true);
+            case "threeToSix":
+                return new YearRange(3, 6, true);
             default:
-                return W_SKILL_NEUTRAL;
+                return new YearRange(1, 3, true);
         }
     }
 
-    private double keywordWeight(Weight weight) {
-        switch (weight) {
-            case REQUIRED:
-                return W_KEYWORD_REQUIRED;
-            case PREFERRED:
-                return W_KEYWORD_PREFERRED;
+    private ExperienceCopy copyFor(String experienceLevel) {
+        switch (experienceLevel == null ? "" : experienceLevel) {
+            case "fresher":
+                return new ExperienceCopy("entry-level Java developer");
+            case "threeToFive":
+                return new ExperienceCopy("Java backend engineer");
+            case "fiveToEight":
+                return new ExperienceCopy("senior Java backend engineer");
+            case "senior":
+            case "sixPlus":
+                return new ExperienceCopy("senior Java technical leader");
             default:
-                return W_KEYWORD_NEUTRAL;
+                return new ExperienceCopy("junior Java developer");
         }
     }
 
-    private enum Weight {
-        REQUIRED,
-        NEUTRAL,
-        PREFERRED
+    private enum RequirementType {
+        REQUIRED(1.0, 1.0),
+        PREFERRED(0.55, 0.55),
+        RESPONSIBILITY(0.78, 0.8),
+        NEUTRAL(0.68, 0.7);
+
+        private final double weight;
+        private final double keywordWeight;
+
+        RequirementType(double weight, double keywordWeight) {
+            this.weight = weight;
+            this.keywordWeight = keywordWeight;
+        }
+    }
+
+    private enum EvidenceLevel {
+        NONE,
+        WEAK,
+        MEDIUM,
+        STRONG
     }
 
     private static final class Requirement {
         private final String label;
+        private final String category;
+        private final RequirementType type;
         private final double weight;
+        private final EvidenceLevel evidenceLevel;
+
+        private Requirement(String label, String category, RequirementType type, double weight, EvidenceLevel evidenceLevel) {
+            this.label = label;
+            this.category = category;
+            this.type = type;
+            this.weight = weight;
+            this.evidenceLevel = evidenceLevel;
+        }
+
+        private boolean isCovered() {
+            return evidenceLevel != EvidenceLevel.NONE;
+        }
+    }
+
+    private static final class KeywordRequirement {
+        private final String label;
+        private final RequirementType type;
         private final boolean covered;
 
-        private Requirement(String label, double weight, boolean covered) {
+        private KeywordRequirement(String label, RequirementType type, boolean covered) {
             this.label = label;
-            this.weight = weight;
+            this.type = type;
             this.covered = covered;
         }
     }
 
-    // ---------------------------------------------------------------------
-    // Copy builders (advice text; unchanged behaviour)
-    // ---------------------------------------------------------------------
+    private static final class SkillSpec {
+        private final String label;
+        private final String category;
+        private final double importance;
+        private final List<String> aliases;
+        private final List<Pattern> patterns;
 
-    private String buildScoreSummary(int score, List<String> matched, int shownMissing) {
-        if (score >= 80) {
-            return "Your resume is a strong fit for this Java role. Polish the remaining keyword gaps before applying.";
+        private SkillSpec(String label, String category, double importance, List<String> aliases) {
+            this.label = label;
+            this.category = category;
+            this.importance = importance;
+            this.aliases = aliases;
+            this.patterns = aliases.stream()
+                    .map(alias -> Pattern.compile("(^|[^a-z0-9+#])" + Pattern.quote(alias.toLowerCase(Locale.ROOT)) + "([^a-z0-9+#]|$)"))
+                    .collect(Collectors.toList());
         }
-        if (score >= 60) {
-            String noun = shownMissing == 1 ? "keyword" : "keywords";
-            return "Your resume matches this Java role, but you are missing " + shownMissing
-                    + " important " + noun + ". Fix the top gaps before applying.";
-        }
-        if (matched.isEmpty()) {
-            return "Your resume needs clearer Java and Spring Boot evidence for this role. Add truthful project and skill proof before applying.";
-        }
-        return "Your resume has some useful Java signals, but it needs stronger alignment with this job description before applying.";
-    }
 
-    private List<String> buildTopFixes(List<String> missingKeywords, List<String> matched, String experienceLevel) {
-        List<String> fixes = new ArrayList<>();
-        if (!missingKeywords.isEmpty()) {
-            fixes.add("Add truthful resume evidence for " + String.join(", ", missingKeywords.stream().limit(3).collect(Collectors.toList())) + ".");
-        }
-        fixes.add("Rewrite your summary for a " + copyFor(experienceLevel).role + " role using the exact Java/Spring keywords you can defend.");
-        fixes.add("Turn one project or work item into a measurable backend impact bullet with Java, Spring Boot, database, and testing details.");
-        if (matched.isEmpty()) {
-            fixes.add("Move your strongest Java projects and tools into the top half of the resume so they are easy to scan.");
-        } else {
-            fixes.add("Keep your strongest matched skills visible near the top: " + String.join(", ", matched.stream().limit(3).collect(Collectors.toList())) + ".");
-        }
-        return fixes.stream().limit(3).collect(Collectors.toList());
-    }
-
-    private List<String> buildBullets(List<String> matched, List<String> missing, String experienceLevel) {
-        ExperienceCopy copy = copyFor(experienceLevel);
-        List<String> bullets = new ArrayList<>(copy.bullets);
-        if (!matched.isEmpty()) {
-            bullets.add(0, "Position yourself as a " + copy.role + " by highlighting hands-on work with "
-                    + String.join(", ", matched.stream().limit(4).collect(Collectors.toList())) + ".");
-        }
-        if (!missing.isEmpty()) {
-            bullets.add("Add truthful project or learning evidence for "
-                    + String.join(", ", missing.stream().limit(3).collect(Collectors.toList()))
-                    + " if you have used them. Avoid keyword stuffing without proof.");
-        }
-        bullets.add("Rewrite weak bullets with this pattern: action verb + Java/Spring skill + measurable business or technical result.");
-        return bullets;
-    }
-
-    private List<String> buildQuestions(List<String> missing, List<String> matched, String experienceLevel) {
-        List<String> focus = new ArrayList<>();
-        focus.addAll(missing);
-        focus.addAll(matched);
-        List<String> questions = new ArrayList<>(Arrays.asList(
-                "Explain how Spring Boot auto-configuration works and when you would override it.",
-                "How would you design a REST API for high traffic, validation, error handling, and versioning?",
-                "What happens internally when a Java HashMap handles collisions?",
-                "How do you write testable service-layer code using JUnit and Mockito?",
-                "How would you debug a slow API in production?"));
-
-        if (focus.contains("Microservices")) {
-            questions.add(0, "How would you split a monolith into microservices without breaking existing users?");
-        }
-        if (focus.contains("Kafka")) {
-            questions.add(0, "How do Kafka consumer groups, offsets, partitions, and retries work in a backend service?");
-        }
-        if ("sixPlus".equals(experienceLevel) || "senior".equals(experienceLevel)) {
-            questions.add(0, "Describe a backend architecture decision you led, including tradeoffs and production impact.");
-        }
-        return questions.stream().limit(7).collect(Collectors.toList());
-    }
-
-    private List<String> buildPlan(List<String> missing, List<String> matched, String experienceLevel) {
-        ExperienceCopy copy = copyFor(experienceLevel);
-        String priority = missing.isEmpty()
-                ? "Spring Boot, REST APIs, SQL, testing"
-                : String.join(", ", missing.stream().limit(4).collect(Collectors.toList()));
-        String strengths = matched.isEmpty()
-                ? "your strongest Java skills"
-                : String.join(", ", matched.stream().limit(3).collect(Collectors.toList()));
-
-        return Arrays.asList(
-                "Day 1: Rewrite resume summary for the target " + copy.role + " role and add exact matching Java keywords you can honestly defend.",
-                "Day 2: Review core Java, OOP, collections, exceptions, streams, and concurrency basics.",
-                "Day 3: Build or polish one Spring Boot REST API story using controller, service, repository, DTO, validation, and error handling.",
-                "Day 4: Study priority gaps from this JD: " + priority + ".",
-                "Day 5: Practice SQL, JPA/Hibernate mappings, transactions, indexes, and common performance problems.",
-                "Day 6: Prepare testing, debugging, CI/CD, Git, and deployment examples from your own experience.",
-                "Day 7: Mock interview day. Practice " + strengths + " plus one system design question.");
-    }
-
-    private ExperienceCopy copyFor(String experienceLevel) {
-        switch (experienceLevel) {
-            case "fresher":
-                return new ExperienceCopy("entry-level Java developer", Arrays.asList(
-                        "Built Java and Spring Boot projects with REST APIs, layered architecture, validation, and database integration.",
-                        "Practiced DSA, OOP, collections, exception handling, and SQL through hands-on projects and coding problems."));
-            case "threeToFive":
-                return new ExperienceCopy("Java backend engineer", Arrays.asList(
-                        "Delivered Java and Spring Boot services with REST APIs, persistence, validation, testing, and release support.",
-                        "Improved backend reliability through debugging, SQL tuning, code reviews, and production-ready error handling."));
-            case "fiveToEight":
-                return new ExperienceCopy("senior Java backend engineer", Arrays.asList(
-                        "Owned Spring Boot service design, database performance, API contracts, security, and CI/CD delivery.",
-                        "Reduced production risk through observability, test strategy, incident debugging, and cross-team backend delivery."));
-            case "senior":
-                return new ExperienceCopy("senior Java technical leader", Arrays.asList(
-                        "Led scalable Java backend design across services, owning tradeoffs, performance, reliability, and delivery standards.",
-                        "Mentored engineers, improved architecture quality, and partnered with product teams on backend roadmap execution."));
-            case "threeToSix":
-                return new ExperienceCopy("mid-level Java backend engineer", Arrays.asList(
-                        "Designed and maintained Spring Boot microservices with database optimization, security, and CI/CD delivery.",
-                        "Reduced defects and deployment risk through test coverage, code reviews, observability, and clear API contracts."));
-            case "sixPlus":
-                return new ExperienceCopy("senior Java backend engineer", Arrays.asList(
-                        "Led design of scalable Java microservices, owning architecture decisions, performance tuning, and production readiness.",
-                        "Mentored engineers, improved engineering standards, and drove delivery across cross-functional backend initiatives."));
-            default:
-                return new ExperienceCopy("junior Java developer", Arrays.asList(
-                        "Delivered Spring Boot REST APIs with JPA repositories, validation, exception handling, and unit tests.",
-                        "Improved API reliability by debugging production issues, writing JUnit/Mockito tests, and collaborating in Agile sprints."));
+        private boolean isPresentIn(String text) {
+            String normalized = text == null ? "" : text.toLowerCase(Locale.ROOT);
+            return patterns.stream().anyMatch(pattern -> pattern.matcher(normalized).find());
         }
     }
 
-    private static class ExperienceCopy {
+    private final class ResumeProfile {
+        private final String original;
+        private final String normalized;
+        private final Map<String, List<String>> sections = new LinkedHashMap<>();
+        private final int bulletCount;
+        private final boolean keywordStuffed;
+
+        private ResumeProfile(String original) {
+            this.original = safeText(original);
+            this.normalized = normalize(original);
+            parseSections();
+            this.bulletCount = (int) Arrays.stream(this.original.split("\\n"))
+                    .filter(line -> line.trim().matches("^[-*•].+"))
+                    .count();
+            this.keywordStuffed = detectKeywordStuffing();
+        }
+
+        private void parseSections() {
+            String current = "summary";
+            sections.put(current, new ArrayList<>());
+            String sectionReadyText = original.replaceAll(
+                    "(?i)\\b(Summary|Profile|Technical Skills|Skills|Skill Set|Technologies|Experience|Work Experience|Professional Experience|Employment|Projects|Project Experience|Personal Projects|Education|Academics|Certifications|Certification)\\s*:",
+                    "\n$1:");
+            for (String rawLine : sectionReadyText.split("\\n")) {
+                String line = rawLine.trim();
+                if (line.isBlank()) {
+                    continue;
+                }
+                String detected = sectionName(line);
+                if (detected != null) {
+                    current = detected;
+                    sections.putIfAbsent(current, new ArrayList<>());
+                } else {
+                    InlineSection inlineSection = inlineSection(line);
+                    if (inlineSection != null) {
+                        current = inlineSection.name;
+                        sections.putIfAbsent(current, new ArrayList<>());
+                        if (!inlineSection.content.isBlank()) {
+                            sections.get(current).add(inlineSection.content);
+                        }
+                    } else {
+                        sections.computeIfAbsent(current, key -> new ArrayList<>()).add(line);
+                    }
+                }
+            }
+        }
+
+        private String sectionName(String line) {
+            String normalizedLine = line.toLowerCase(Locale.ROOT).replace(":", "").trim();
+            if (normalizedLine.matches("(professional )?summary|profile")) {
+                return "summary";
+            }
+            if (normalizedLine.matches("technical skills|skills|skill set|technologies")) {
+                return "skills";
+            }
+            if (normalizedLine.matches("experience|work experience|professional experience|employment")) {
+                return "experience";
+            }
+            if (normalizedLine.matches("projects|project experience|personal projects")) {
+                return "projects";
+            }
+            if (normalizedLine.matches("education|academics")) {
+                return "education";
+            }
+            if (normalizedLine.matches("certifications|certification")) {
+                return "certifications";
+            }
+            return null;
+        }
+
+        private InlineSection inlineSection(String line) {
+            int colon = line.indexOf(':');
+            if (colon < 0) {
+                return null;
+            }
+            String maybeHeader = sectionName(line.substring(0, colon));
+            if (maybeHeader == null) {
+                return null;
+            }
+            return new InlineSection(maybeHeader, line.substring(colon + 1).trim());
+        }
+
+        private EvidenceLevel evidenceFor(SkillSpec skill) {
+            if (appearsInLines(skill, experienceProjectLines(), true)) {
+                return EvidenceLevel.STRONG;
+            }
+            if (appearsInLines(skill, sections.getOrDefault("summary", new ArrayList<>()), false)) {
+                return EvidenceLevel.MEDIUM;
+            }
+            if (appearsInLines(skill, sections.getOrDefault("skills", new ArrayList<>()), false)
+                    || skill.isPresentIn(normalized)) {
+                return skill.isPresentIn(String.join(" ", sections.getOrDefault("skills", new ArrayList<>())))
+                        ? EvidenceLevel.WEAK
+                        : EvidenceLevel.MEDIUM;
+            }
+            return EvidenceLevel.NONE;
+        }
+
+        private boolean appearsInLines(SkillSpec skill, List<String> lines, boolean requireEvidenceContext) {
+            for (String line : lines) {
+                String normalizedLine = normalize(line);
+                if (!skill.isPresentIn(normalizedLine)) {
+                    continue;
+                }
+                if (!requireEvidenceContext || isEvidenceLine(normalizedLine)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private boolean isEvidenceLine(String line) {
+            boolean action = ACTION_VERBS.stream().anyMatch(line::contains);
+            boolean context = CONTEXT_WORDS.stream().anyMatch(line::contains) || METRIC_PATTERN.matcher(line).find();
+            return action && context;
+        }
+
+        private List<String> experienceProjectLines() {
+            List<String> lines = new ArrayList<>();
+            lines.addAll(sections.getOrDefault("experience", new ArrayList<>()));
+            lines.addAll(sections.getOrDefault("work experience", new ArrayList<>()));
+            lines.addAll(sections.getOrDefault("projects", new ArrayList<>()));
+            return lines;
+        }
+
+        private boolean containsPhrase(String phrase) {
+            return normalized.contains(phrase.toLowerCase(Locale.ROOT));
+        }
+
+        private boolean containsStem(String wantedStem) {
+            return contentTokens(normalized).stream().map(AnalysisService::stem).anyMatch(wantedStem::equals);
+        }
+
+        private boolean hasSection(String section) {
+            return sections.containsKey(section) && !sections.get(section).isEmpty();
+        }
+
+        private int impactScoreHint() {
+            return (int) experienceProjectLines().stream().filter(line -> METRIC_PATTERN.matcher(line).find()).count();
+        }
+
+        private boolean hasWeirdSymbolNoise() {
+            if (original.isBlank()) {
+                return false;
+            }
+            long weird = original.chars()
+                    .filter(ch -> !(Character.isLetterOrDigit(ch) || Character.isWhitespace(ch)
+                            || ".,;:!?()[]{}+-*/#@%&'\"_|•".indexOf(ch) >= 0))
+                    .count();
+            return weird > Math.max(20, original.length() / 20);
+        }
+
+        private boolean detectKeywordStuffing() {
+            List<String> tokens = contentTokens(normalized);
+            if (tokens.isEmpty()) {
+                return false;
+            }
+            Map<String, Long> counts = tokens.stream().collect(Collectors.groupingBy(AnalysisService::stem, Collectors.counting()));
+            boolean repeatedDump = counts.values().stream().anyMatch(count -> count >= 9);
+            String skillsText = String.join(" ", sections.getOrDefault("skills", new ArrayList<>()));
+            long commaCount = skillsText.chars().filter(ch -> ch == ',').count();
+            return repeatedDump || (commaCount >= 18 && bulletCount < 2);
+        }
+
+        private boolean mostEvidenceWeak(List<Requirement> requirements) {
+            List<Requirement> covered = requirements.stream().filter(Requirement::isCovered).collect(Collectors.toList());
+            if (covered.isEmpty()) {
+                return false;
+            }
+            long weak = covered.stream().filter(r -> r.evidenceLevel == EvidenceLevel.WEAK).count();
+            return weak > covered.size() / 2;
+        }
+    }
+
+    private static final class YearRange {
+        private final int min;
+        private final int max;
+        private final boolean present;
+
+        private YearRange(int min, int max, boolean present) {
+            this.min = min;
+            this.max = max;
+            this.present = present;
+        }
+    }
+
+    private static final class InlineSection {
+        private final String name;
+        private final String content;
+
+        private InlineSection(String name, String content) {
+            this.name = name;
+            this.content = content;
+        }
+    }
+
+    private static final class ExperienceCopy {
         private final String role;
-        private final List<String> bullets;
 
-        private ExperienceCopy(String role, List<String> bullets) {
+        private ExperienceCopy(String role) {
             this.role = role;
-            this.bullets = bullets;
         }
     }
 }
