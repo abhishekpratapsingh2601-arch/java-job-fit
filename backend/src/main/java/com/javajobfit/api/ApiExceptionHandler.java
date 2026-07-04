@@ -7,10 +7,15 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import com.javajobfit.service.ReportNotFoundException;
 
@@ -56,6 +61,30 @@ public class ApiExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, String> handleUnreadable(HttpMessageNotReadableException exception) {
         return Collections.singletonMap("error", "Request body could not be parsed. Expected valid JSON.");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    @ResponseStatus(HttpStatus.PAYLOAD_TOO_LARGE)
+    public Map<String, String> handleUploadTooLarge(MaxUploadSizeExceededException exception) {
+        return Collections.singletonMap("error", "This file is too large. Maximum size is 5MB. Please paste your resume text instead.");
+    }
+
+    @ExceptionHandler({MultipartException.class, MissingServletRequestPartException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, String> handleBadMultipart(Exception exception) {
+        return Collections.singletonMap("error", "Could not read the uploaded file. Please paste your resume text instead.");
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+    public Map<String, String> handleMethodNotAllowed(HttpRequestMethodNotSupportedException exception) {
+        return Collections.singletonMap("error", "Method not allowed.");
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    @ResponseStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+    public Map<String, String> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException exception) {
+        return Collections.singletonMap("error", "Unsupported content type.");
     }
 
     @ExceptionHandler(Exception.class)

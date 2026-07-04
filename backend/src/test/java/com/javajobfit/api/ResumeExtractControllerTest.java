@@ -1,6 +1,7 @@
 package com.javajobfit.api;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -97,6 +98,26 @@ class ResumeExtractControllerTest {
         mockMvc.perform(multipart("/api/resume/extract").file(file))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Could not read this file. Please paste your resume text instead."));
+    }
+
+    @Test
+    void truncatesVeryLongResumeInsteadOfRejectingIt() throws Exception {
+        // ~30k chars of text — more than the 12k extraction cap. A long but valid resume must
+        // still extract (truncated), not fail with "could not read this file".
+        StringBuilder longText = new StringBuilder();
+        while (longText.length() < 30000) {
+            longText.append("Java Spring Boot backend engineer with REST API SQL JUnit Docker experience. ");
+        }
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "long-resume.txt",
+                "text/plain",
+                longText.toString().getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/api/resume/extract").file(file))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.text").value(containsString("Java Spring Boot backend engineer")))
+                .andExpect(jsonPath("$.characterCount").value(lessThanOrEqualTo(12000)));
     }
 
     private byte[] docxWithText(String text) throws Exception {

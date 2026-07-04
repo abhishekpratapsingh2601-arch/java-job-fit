@@ -10,6 +10,9 @@ app:
   version: "${APP_VERSION:local}"
   cors:
     allowed-origins: "${ALLOWED_ORIGINS:http://localhost:4173,http://127.0.0.1:4173,https://abhishekpratapsingh2601-arch.github.io}"
+  rate-limit:
+    api-post-per-minute: "${RATE_LIMIT_API_POST_PER_MINUTE:30}"
+    extract-per-minute: "${RATE_LIMIT_EXTRACT_PER_MINUTE:10}"
   payment:
     provider-enabled: "${PAYMENT_PROVIDER_ENABLED:false}"
     stripe-secret-key: "${STRIPE_SECRET_KEY:}"
