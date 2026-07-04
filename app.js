@@ -53,6 +53,12 @@ const notifyPro = document.querySelector("#notify-pro");
 
 let latestReport = null;
 let latestReportSaved = false;
+// Auto-upgrade state: when a scan falls back to the browser engine (backend cold/slow),
+// we retry the backend in the background and replace the preview with the real saved report.
+let scanGeneration = 0;
+let upgradeTimers = [];
+let upgradeInFlight = false;
+const UPGRADE_DELAYS_MS = [20000, 45000, 90000];
 let resumePasteTracked = false;
 let jdPasteTracked = false;
 let progressTimer = null;
@@ -714,7 +720,7 @@ function validateInputs() {
   return valid;
 }
 
-async function createBackendReport() {
+async function createBackendReport(resumeText, jobDescription, experienceLevel) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), backendTimeoutMs);
 
@@ -723,9 +729,9 @@ async function createBackendReport() {
     headers: { "Content-Type": "application/json" },
     signal: controller.signal,
     body: JSON.stringify({
-      resumeText: resumeInput.value,
-      jobDescription: jobInput.value,
-      experienceLevel: experienceInput.value,
+      resumeText,
+      jobDescription,
+      experienceLevel,
     }),
   }).finally(() => clearTimeout(timeoutId));
 
@@ -745,21 +751,74 @@ async function createBackendReport() {
 }
 
 async function buildReport() {
+  const resumeText = resumeInput.value;
+  const jobText = jobInput.value;
+  const experienceLevel = experienceInput.value;
   if (!apiBase) {
-    return analyzeLocally(resumeInput.value, jobInput.value, experienceInput.value);
+    return analyzeLocally(resumeText, jobText, experienceLevel);
   }
   try {
-    return await createBackendReport();
+    return await createBackendReport(resumeText, jobText, experienceLevel);
   } catch (error) {
     if (error.name === "AbortError" || error.status >= 500 || error instanceof TypeError) {
-      const report = analyzeLocally(resumeInput.value, jobInput.value, experienceInput.value);
+      const report = analyzeLocally(resumeText, jobText, experienceLevel);
       report.saved = false;
       report.id = null;
       report.notice =
-        "The backend is taking longer than usual, so this free preview was generated in your browser. The detailed score breakdown appears once the backend is awake — try again in a minute to save the report.";
+        "The backend is waking up, so this free preview was generated in your browser. We will keep retrying in the background and update your score automatically once the full engine responds.";
+      scheduleBackendUpgrade(scanGeneration, resumeText, jobText, experienceLevel);
       return report;
     }
     throw error;
+  }
+}
+
+function cancelBackendUpgrade() {
+  upgradeTimers.forEach(clearTimeout);
+  upgradeTimers = [];
+}
+
+function scheduleBackendUpgrade(generation, resumeText, jobText, experienceLevel) {
+  cancelBackendUpgrade();
+  UPGRADE_DELAYS_MS.forEach((delay) => {
+    upgradeTimers.push(setTimeout(() => {
+      attemptBackendUpgrade(generation, resumeText, jobText, experienceLevel);
+    }, delay));
+  });
+}
+
+async function attemptBackendUpgrade(generation, resumeText, jobText, experienceLevel) {
+  if (!apiBase || generation !== scanGeneration || latestReportSaved || upgradeInFlight) {
+    return;
+  }
+  upgradeInFlight = true;
+  try {
+    // Cheap health probe first: it warms the dyno and avoids firing the heavy scan
+    // endpoint while the backend is still asleep.
+    const healthController = new AbortController();
+    const healthTimer = setTimeout(() => healthController.abort(), 5000);
+    const health = await fetch(`${apiBase}/api/health`, { signal: healthController.signal })
+      .finally(() => clearTimeout(healthTimer));
+    if (!health.ok) {
+      return;
+    }
+
+    const report = await createBackendReport(resumeText, jobText, experienceLevel);
+    if (generation !== scanGeneration) {
+      return; // user started a new scan or cleared while we were retrying
+    }
+    cancelBackendUpgrade();
+    renderResults(report);
+    feedbackStatus.textContent =
+      "Backend is awake. Your score was recalculated with the full engine and the report is now saved.";
+    trackEvent("fallback_upgraded", {
+      publicId: latestReport?.id || null,
+      score: latestReport?.score ?? null,
+    });
+  } catch (error) {
+    // Stay on the browser preview; a later scheduled attempt may still succeed.
+  } finally {
+    upgradeInFlight = false;
   }
 }
 
@@ -769,6 +828,8 @@ function setLoading(isLoading) {
 }
 
 function resetScanState() {
+  scanGeneration += 1;
+  cancelBackendUpgrade();
   latestReport = null;
   latestReportSaved = false;
   formError.textContent = "";
@@ -940,6 +1001,8 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
+  scanGeneration += 1;
+  cancelBackendUpgrade();
   setLoading(true);
   startScanProgress();
   try {
