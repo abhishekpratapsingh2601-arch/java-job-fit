@@ -22,8 +22,13 @@ public class AnalysisService {
     private static final Pattern PRIVATE_MARKER = Pattern.compile(
             "(do[_-]?not[_-]?store|beta[_-]?canary|canary|resume[_-]?marker|jd[_-]?marker)[a-z0-9_-]*",
             Pattern.CASE_INSENSITIVE);
+    // A "metric" must involve an actual number: either a value with a unit, or an outcome word
+    // within the same clause as a digit. Bare words like "improved performance" do not count,
+    // otherwise the impact score is gameable with adjectives instead of evidence.
     private static final Pattern METRIC_PATTERN = Pattern.compile(
-            "(\\d+\\s*(%|ms|s|sec|secs|seconds|users|requests|rps|qps|minutes|hours|days)|latency|uptime|cost|defects|scale|performance|throughput|reduced|improved|optimized)",
+            "(\\d+(?:[.,]\\d+)?\\s*(%|percent|ms|s|sec|secs|seconds|users|requests|rps|qps|minutes|hours|days|x)\\b"
+                    + "|(reduced|improved|optimized|cut|decreased|increased|scaled)[^.\\n]{0,60}\\d"
+                    + "|\\d[^.\\n]{0,60}(latency|uptime|cost|defects|throughput|performance))",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern YEARS_PATTERN = Pattern.compile("(\\d+)\\s*(?:\\+|to|-)?\\s*(\\d+)?\\s*\\+?\\s*years?");
 
@@ -515,6 +520,12 @@ public class AnalysisService {
             ResumeProfile profile,
             String experienceLevel) {
         List<String> fixes = new ArrayList<>();
+        if (profile.original.length() >= 160
+                && !profile.hasSection("experience")
+                && !profile.hasSection("projects")) {
+            fixes.add("We could not find an Experience or Projects section, and an ATS may not either. "
+                    + "Use clear headings like \"Experience\" and \"Projects\" so your strongest evidence is credited.");
+        }
         missingReqs.stream()
                 .filter(r -> r.type == RequirementType.REQUIRED)
                 .findFirst()

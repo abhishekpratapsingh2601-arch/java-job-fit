@@ -88,6 +88,40 @@ class AnalysisServiceTest {
     }
 
     @Test
+    void impactMetricsRequireActualNumbersNotAdjectives() {
+        String jd = "Required: Java, Spring Boot, REST APIs, SQL.";
+        String base = "Skills: Java, Spring Boot, REST APIs, SQL.\nExperience: ";
+        String adjectivesOnly = base
+                + "- Built Java Spring Boot REST APIs and improved performance.\n"
+                + "- Optimized SQL queries and improved throughput for services.";
+        String realNumbers = base
+                + "- Built Java Spring Boot REST APIs and reduced p95 latency from 800ms to 220ms.\n"
+                + "- Optimized SQL queries, cutting report generation time by 40%.";
+
+        AnalysisResult vague = service.analyze(adjectivesOnly, jd, "oneToThree");
+        AnalysisResult measured = service.analyze(realNumbers, jd, "oneToThree");
+
+        assertThat(vague.getScoreBreakdown().getImpactScore())
+                .as("adjectives without digits must not earn impact points")
+                .isZero();
+        assertThat(measured.getScoreBreakdown().getImpactScore()).isGreaterThan(0);
+    }
+
+    @Test
+    void warnsWhenNoExperienceOrProjectsSectionIsDetected() {
+        String jd = "Required: Java, Spring Boot, REST APIs, SQL, JUnit.";
+        String sectionless = "Java backend developer familiar with Spring Boot and REST APIs. "
+                + "Worked with SQL databases and JUnit tests across several internal tools and release cycles. "
+                + "Comfortable with Git, Docker, debugging, and Agile collaboration in distributed teams.";
+        String sectioned = "Experience: Built Java Spring Boot REST APIs with SQL persistence and JUnit tests.";
+
+        assertThat(service.analyze(sectionless, jd, "oneToThree").getTopFixes())
+                .anyMatch(fix -> fix.contains("could not find an Experience or Projects section"));
+        assertThat(service.analyze(sectioned, jd, "oneToThree").getTopFixes())
+                .noneMatch(fix -> fix.contains("could not find an Experience or Projects section"));
+    }
+
+    @Test
     void scoreCapsProtectAgainstWeakOrMisleadingInputs() {
         assertThat(service.analyze("Java Spring Boot", "Required: Java Spring Boot REST APIs SQL testing.", "fresher").getScore())
                 .isLessThanOrEqualTo(45);

@@ -514,15 +514,10 @@ function normalizeReport(report) {
     bullets: bullets.slice(0, 1),
     questions: questions.slice(0, 3),
     plan: plan.slice(0, 2),
-    scoreBreakdown: report.scoreBreakdown || {
-      mustHaveScore: report.mustHaveScore || 0,
-      preferredScore: report.preferredScore || 0,
-      keywordScore: report.keywordScore || 0,
-      evidenceScore: report.evidenceScore || 0,
-      seniorityScore: report.seniorityScore || 0,
-      impactScore: report.impactScore || 0,
-      readabilityScore: report.readabilityScore || 0,
-    },
+    // Only the backend engine produces a real 7-component breakdown. The browser fallback
+    // engine computes a simpler preview score, so we pass null and hide the breakdown card
+    // instead of rendering misleading zeros next to a non-zero headline score.
+    scoreBreakdown: report.scoreBreakdown || null,
     premiumAvailable: report.premiumAvailable !== false,
     premiumLockedSections: report.premiumLockedSections || defaultLockedSections(),
     experienceLevel: report.experienceLevel || experienceInput.value,
@@ -544,8 +539,19 @@ function renderLockedSections() {
   lockedGrid.hidden = true;
 }
 
-function renderScoreBreakdown(breakdown = {}) {
+function renderScoreBreakdown(breakdown) {
   if (!scoreBreakdownNode) return;
+  const card = scoreBreakdownNode.closest(".score-breakdown-card");
+  scoreBreakdownNode.innerHTML = "";
+
+  if (!breakdown) {
+    // Browser-fallback preview: no real component breakdown exists, so hide the card
+    // rather than showing zeros that contradict the headline score.
+    if (card) card.hidden = true;
+    return;
+  }
+  if (card) card.hidden = false;
+
   const rows = [
     ["Must-have skills", breakdown.mustHaveScore, 30],
     ["Preferred skills", breakdown.preferredScore, 10],
@@ -556,7 +562,6 @@ function renderScoreBreakdown(breakdown = {}) {
     ["Readability", breakdown.readabilityScore, 10],
   ];
 
-  scoreBreakdownNode.innerHTML = "";
   rows.forEach(([label, value, max]) => {
     const item = document.createElement("div");
     item.className = "breakdown-item";
@@ -751,7 +756,7 @@ async function buildReport() {
       report.saved = false;
       report.id = null;
       report.notice =
-        "The backend is taking longer than usual, so this free preview was generated in your browser. Try again in a minute to save the report.";
+        "The backend is taking longer than usual, so this free preview was generated in your browser. The detailed score breakdown appears once the backend is awake — try again in a minute to save the report.";
       return report;
     }
     throw error;
