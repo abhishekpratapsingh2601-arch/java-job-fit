@@ -1,0 +1,35 @@
+name: Keep backend and database warm
+
+# Pings the backend's DB health endpoint on a schedule so that:
+#  - Render's free instance does not sleep (it idles out after ~15 min), and
+#  - Supabase does not auto-pause (it pauses after ~7 days of no activity).
+# The /api/health/db endpoint runs a lightweight query, which counts as
+# database activity for Supabase and keeps a warm connection on Render.
+
+on:
+  schedule:
+    # Every 10 minutes — comfortably under Render's ~15 min idle-sleep window.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/health/db
+        run: |
+          set -euo pipefail
+          code=$(curl -s -o /tmp/health.json -w "%{http_code}" --max-time 90 \
+            https://java-job-fit.onrender.com/api/health/db || echo "000")
+          echo "HTTP $code"
+          cat /tmp/health.json || true
+          echo
+          if [ "$code" != "200" ]; then
+            echo "Health check failed with HTTP $code"
+            exit 1
+          fi
+          grep -q '"database":"reachable"' /tmp/health.json
