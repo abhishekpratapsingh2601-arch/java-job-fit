@@ -1,14 +1,10 @@
 name: Keep backend and database warm
 
-# Pings the backend's DB health endpoint on a schedule so that:
-#  - Render's free instance does not sleep (it idles out after ~15 min), and
-#  - Supabase does not auto-pause (it pauses after ~7 days of no activity).
-# The /api/health/db endpoint runs a lightweight query, which counts as
-# database activity for Supabase and keeps a warm connection on Render.
+# Pings the backend's DB health endpoint on a schedule.
+# The endpoint performs a lightweight DB check and returns safe health JSON only.
 
 on:
   schedule:
-    # Every 10 minutes — comfortably under Render's ~15 min idle-sleep window.
     - cron: "*/10 * * * *"
   workflow_dispatch: {}
 
@@ -19,17 +15,97 @@ concurrency:
 jobs:
   ping:
     runs-on: ubuntu-latest
+    timeout-minutes: 6
+
     steps:
-      - name: Ping /api/health/db
+      - name: Ping /api/health/db with retries
+        shell: bash
         run: |
           set -euo pipefail
-          code=$(curl -s -o /tmp/health.json -w "%{http_code}" --max-time 90 \
-            https://java-job-fit.onrender.com/api/health/db || echo "000")
-          echo "HTTP $code"
-          cat /tmp/health.json || true
-          echo
-          if [ "$code" != "200" ]; then
-            echo "Health check failed with HTTP $code"
-            exit 1
-          fi
-          grep -q '"database":"reachable"' /tmp/health.json
+
+          url="https://java-job-fit.onrender.com/api/health/db"
+          response_file="/tmp/health.json"
+          curl_error_file="/tmp/health-curl-error.log"
+          max_attempts=5
+          connect_timeout=15
+          max_time=90
+
+          echo "Checking JavaJobFit backend/database health"
+          echo "Endpoint: ${url}"
+
+          for attempt in $(seq 1 "${max_attempts}"); do
+            echo ""
+            echo "Attempt ${attempt}/${max_attempts}"
+
+            rm -f "${response_file}" "${curl_error_file}"
+
+            if http_status="$(
+              curl \
+                --silent \
+                --show-error \
+                --location \
+                --connect-timeout "${connect_timeout}" \
+                --max-time "${max_time}" \
+                --output "${response_file}" \
+                --write-out "%{http_code}" \
+                "${url}" \
+                2> "${curl_error_file}"
+            )"; then
+              echo "HTTP ${http_status}"
+
+              if [ -f "${response_file}" ]; then
+                echo "Response body:"
+                cat "${response_file}"
+                echo ""
+              else
+                echo "No response body file was created."
+              fi
+
+              if [ "${http_status}" = "200" ] && [ -f "${response_file}" ]; then
+                if jq -e '.database == "reachable"' "${response_file}" > /dev/null; then
+                  echo "Health check passed: HTTP 200 and database is reachable."
+                  exit 0
+                fi
+
+                echo "JSON validation failed: expected database=reachable."
+              elif [ "${http_status}" != "200" ]; then
+                echo "Unexpected HTTP status: ${http_status}"
+              fi
+            else
+              curl_exit=$?
+              echo "curl failed with exit code ${curl_exit}."
+
+              case "${curl_exit}" in
+                6)
+                  echo "Diagnostic: DNS resolution failed."
+                  ;;
+                7)
+                  echo "Diagnostic: Connection refused or host unreachable."
+                  ;;
+                28)
+                  echo "Diagnostic: Request timed out."
+                  ;;
+                35|60)
+                  echo "Diagnostic: SSL/TLS certificate or handshake issue."
+                  ;;
+                *)
+                  echo "Diagnostic: curl reported a network/client error."
+                  ;;
+              esac
+
+              if [ -s "${curl_error_file}" ]; then
+                echo "curl stderr:"
+                cat "${curl_error_file}"
+              fi
+            fi
+
+            if [ "${attempt}" -lt "${max_attempts}" ]; then
+              sleep_seconds=$((2 ** attempt))
+              echo "Retrying in ${sleep_seconds}s..."
+              sleep "${sleep_seconds}"
+            fi
+          done
+
+          echo ""
+          echo "Health check failed after ${max_attempts} attempts."
+          exit 1
