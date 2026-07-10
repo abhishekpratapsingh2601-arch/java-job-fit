@@ -1,11 +1,14 @@
 name: Keep backend and database warm
 
-# Pings the backend's DB health endpoint on a schedule.
-# The endpoint performs a lightweight DB check and returns safe health JSON only.
+# Manual, on-demand health check only.
+#
+# Scheduled keep-warm pinging is handled by cron-job.org (see KEEP_WARM_SETUP.md),
+# which is more reliable than GitHub's delayed cron and lets us restrict the window to
+# stay inside Render's free instance-hour budget. The old "*/10 * * * *" schedule was
+# removed because GitHub cron delays caused cold-start timeouts and failure-email noise.
+# Run this manually from the Actions tab when you want an ad-hoc health check.
 
 on:
-  schedule:
-    - cron: "*/10 * * * *"
   workflow_dispatch: {}
 
 concurrency:
