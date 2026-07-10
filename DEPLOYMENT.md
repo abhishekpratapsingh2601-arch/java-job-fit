@@ -229,6 +229,17 @@ After GitHub Pages updates, test:
 - Privacy, Terms, and Contact links work.
 - Mobile view has no horizontal scroll.
 
+## Keep Warm (free tier)
+
+The Render free instance sleeps after ~15 min idle and cold-starts in ~100s, which makes
+the first scan slow and the first upload look like it failed. The app handles cold starts
+gracefully (browser-fallback scan + upload warm/retry), and scheduled keep-warm pinging runs
+from cron-job.org on a ~20h/day window to stay inside the free instance-hour budget.
+
+See `KEEP_WARM_SETUP.md` for the exact cron-job.org settings. The GitHub Actions workflow
+`.github/workflows/keepalive.yml` is manual-only (`workflow_dispatch`) and is not the
+scheduled pinger.
+
 ## Privacy Rules
 
 Do not store raw resume text, raw job description text, uploaded files, analytics payloads containing raw input, or stack traces containing user input.

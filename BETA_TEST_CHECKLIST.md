@@ -9,6 +9,8 @@
 - Flyway tables exist
 - Canary privacy search returns 0 rows
 - Render logs do not contain DO_NOT_STORE or CANARY markers
+- Keep-warm ping is configured on cron-job.org (see KEEP_WARM_SETUP.md)
+- Upload a PDF/DOCX on the live site and confirm it extracts (retries if the server was asleep)
 
 ## Production backend
 
