@@ -67,6 +67,18 @@ let progressPercent = 0;
 const apiBase = (window.JAVAJOBFIT_API_BASE || "").replace(/\/$/, "");
 const defaultAnalyzeLabel = "Analyze my Java resume";
 const backendTimeoutMs = 18000;
+const uploadTimeoutMs = 120000; // cold Render free instance can take ~100s to wake
+let backendWarmed = false;
+
+// Wake the free-tier backend early so the first scan/upload does not eat a ~100s cold start.
+// Fire-and-forget on load, and again the first time the user touches the upload control.
+function warmBackend() {
+  if (!apiBase || backendWarmed || window.location.protocol === "file:") return;
+  backendWarmed = true;
+  fetch(`${apiBase}/api/health`, { method: "GET", keepalive: true }).catch(() => {
+    backendWarmed = false; // allow a later retry if the wake ping failed
+  });
+}
 const urlParams = new URLSearchParams(window.location.search);
 const pageSource = urlParams.get("source") || urlParams.get("ref") || "";
 const utmSource = urlParams.get("utm_source") || "";
@@ -907,42 +919,68 @@ async function extractResumeText(file) {
     return;
   }
 
-  const formData = new FormData();
-  formData.append("file", file);
+  warmBackend();
   uploadStatus.textContent = "Reading your resume file through JavaJobFit API...";
 
-  try {
-    const response = await fetch(`${apiBase}/api/resume/extract`, {
-      method: "POST",
-      body: formData,
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (response.status === 404) {
-      throw new Error("resume_extract_endpoint_missing");
-    }
-    if (!response.ok || !payload.text) {
-      throw new Error(payload.error || "Could not read this file.");
-    }
+  // The backend is on a free tier that sleeps; the first request can take ~100s to wake.
+  // Try up to twice with a long timeout so a cold start doesn't look like a broken upload.
+  const maxAttempts = 2;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), uploadTimeoutMs);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch(`${apiBase}/api/resume/extract`, {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeoutId));
 
-    resumeInput.value = payload.text;
-    resumeError.textContent = "";
-    resumePasteTracked = true;
-    uploadStatus.textContent = "Resume text extracted. Please review it before analyzing.";
-    trackEvent("resume_uploaded", {
-      label: lowerName.endsWith(".txt") ? "txt" : "document",
-      reason: "text_extracted",
-    });
-  } catch (error) {
-    console.warn("Resume extraction failed", error);
-    if (error.message === "resume_extract_endpoint_missing") {
-      uploadStatus.textContent = "Resume upload is temporarily unavailable. Please paste your resume text instead.";
-      trackEvent("scan_failed", { reason: "resume_extract_endpoint_missing" });
-    } else {
-      uploadStatus.textContent = "Could not read this file. Please paste your resume text instead.";
+      if (response.status === 404) {
+        uploadStatus.textContent = "Resume upload is temporarily unavailable. Please paste your resume text instead.";
+        trackEvent("scan_failed", { reason: "resume_extract_endpoint_missing" });
+        resumeFileInput.value = "";
+        return;
+      }
+
+      const payload = await response.json().catch(() => ({}));
+
+      // 5xx during a cold start / spin-up is transient — retry once before giving up.
+      if (response.status >= 500 && attempt < maxAttempts) {
+        uploadStatus.textContent = "Server is waking up. Retrying your resume upload...";
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+        continue;
+      }
+
+      if (!response.ok || !payload.text) {
+        throw new Error(payload.error || "Could not read this file.");
+      }
+
+      resumeInput.value = payload.text;
+      resumeError.textContent = "";
+      resumePasteTracked = true;
+      uploadStatus.textContent = "Resume text extracted. Please review it before analyzing.";
+      trackEvent("resume_uploaded", {
+        label: lowerName.endsWith(".txt") ? "txt" : "document",
+        reason: "text_extracted",
+      });
+      resumeFileInput.value = "";
+      return;
+    } catch (error) {
+      const wokeUpRetryable = error.name === "AbortError" || error instanceof TypeError;
+      if (wokeUpRetryable && attempt < maxAttempts) {
+        uploadStatus.textContent = "Server is waking up. Retrying your resume upload...";
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+        continue;
+      }
+      console.warn("Resume extraction failed", error);
+      uploadStatus.textContent =
+        "Could not read this file yet — the server may be waking up. Try again in a minute, or paste your resume text.";
       trackEvent("scan_failed", { reason: "resume_extract_failed" });
+      resumeFileInput.value = "";
+      return;
     }
-  } finally {
-    resumeFileInput.value = "";
   }
 }
 
@@ -1054,6 +1092,11 @@ clearButton.addEventListener("click", () => {
 resumeFileInput?.addEventListener("change", () => {
   extractResumeText(resumeFileInput.files?.[0]);
 });
+
+// Wake the backend as soon as the user shows intent, so it is warm by upload/scan time.
+resumeFileInput?.addEventListener("focus", warmBackend);
+resumeInput.addEventListener("focus", warmBackend);
+jobInput.addEventListener("focus", warmBackend);
 
 resumeInput.addEventListener("input", () => {
   if (!resumePasteTracked && resumeInput.value.trim().length > 30) {
@@ -1217,3 +1260,6 @@ if (pricingSection && "IntersectionObserver" in window) {
   }, { threshold: 0.35 });
   pricingObserver.observe(pricingSection);
 }
+
+// Warm the free-tier backend on initial load so the first scan/upload avoids a cold start.
+warmBackend();
