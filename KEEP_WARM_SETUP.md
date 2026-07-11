@@ -28,14 +28,30 @@ least-active slice (US night + Europe pre-dawn) — that's the window we let it 
 1. Sign up at https://cron-job.org
 2. Create a cronjob:
    - **Title:** JavaJobFit keep-warm
-   - **URL:** `https://java-job-fit.onrender.com/api/health/db`
+   - **URL:** `https://java-job-fit.onrender.com/api/health`
    - **Schedule:** every **10 minutes**, restricted to UTC hours **00–03 and 08–23**
      (i.e., paused 04:00–07:59 UTC).
    - Custom cron expression if needed: `*/10 0-3,8-23 * * *`
    - **Timezone:** UTC
-3. Save. Expected response: HTTP 200 with `"database":"reachable"`.
+3. Save. Expected response: HTTP 200 with `"status":"ok"`.
 
 Result: ~20h/day × ~30 days ≈ ~600 instance-hours/month — safely under the 750 cap.
+
+### Important: ping `/api/health`, NOT `/api/health/db`
+
+Keep-warm only needs to stop Render's 15-min sleep, so it must hit a **liveness** endpoint
+(`/api/health`) that returns 200 whenever the app is up. Do **not** point it at
+`/api/health/db` (a readiness/DB check): if Supabase has a transient blip, that endpoint
+returns 503, cron-job.org counts repeated failures, and after ~26 it **auto-disables the
+keep-warm job entirely** — so a brief DB hiccup silently turns off your keep-warm and the
+instance starts sleeping again. Liveness pinging avoids that failure mode.
+
+`/api/health/db` is for manual monitoring/alerting, not for keep-warm.
+
+Trade-off: pinging `/api/health` does not generate Supabase DB activity, so it does not
+prevent Supabase's 7-day idle pause. During an active beta, real scans keep Supabase
+active. If the app goes ~7 days with zero traffic, unpause Supabase manually from its
+dashboard (30 seconds). This is a much rarer/gentler event than Render's 15-min sleep.
 
 ## GitHub Actions workflow
 

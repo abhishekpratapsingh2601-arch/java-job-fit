@@ -236,6 +236,11 @@ the first scan slow and the first upload look like it failed. The app handles co
 gracefully (browser-fallback scan + upload warm/retry), and scheduled keep-warm pinging runs
 from cron-job.org on a ~20h/day window to stay inside the free instance-hour budget.
 
+The keep-warm pinger must hit the **liveness** endpoint `/api/health` (up whenever the app
+is up), NOT `/api/health/db`. Pinging the DB endpoint lets a transient Supabase blip mark
+repeated failures, which makes cron-job.org auto-disable the keep-warm job and lets the
+instance sleep again. `/api/health/db` is for manual monitoring only.
+
 See `KEEP_WARM_SETUP.md` for the exact cron-job.org settings. The GitHub Actions workflow
 `.github/workflows/keepalive.yml` is manual-only (`workflow_dispatch`) and is not the
 scheduled pinger.
