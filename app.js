@@ -922,12 +922,20 @@ async function extractResumeText(file) {
   warmBackend();
   uploadStatus.textContent = "Reading your resume file through JavaJobFit API...";
 
-  // The backend is on a free tier that sleeps; the first request can take ~100s to wake.
-  // Try up to twice with a long timeout so a cold start doesn't look like a broken upload.
-  const maxAttempts = 2;
+  // The backend is on a free tier that sleeps and can take ~100s to cold-start, during which
+  // it may return fast 5xx/network errors. Keep retrying long enough to outlast a full cold
+  // boot (up to ~2 min of waiting), with a live "waking up" status so it self-heals instead
+  // of failing on the first attempt.
+  const maxAttempts = 6;
+  const retryDelaysMs = [5000, 10000, 20000, 30000, 30000]; // waits between attempts (~95s total)
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), uploadTimeoutMs);
+    const retryWithStatus = async () => {
+      const waitMs = retryDelaysMs[attempt - 1] || 30000;
+      uploadStatus.textContent = `Server is waking up (this can take up to a minute). Retrying automatically... (${attempt}/${maxAttempts})`;
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    };
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -946,10 +954,9 @@ async function extractResumeText(file) {
 
       const payload = await response.json().catch(() => ({}));
 
-      // 5xx during a cold start / spin-up is transient — retry once before giving up.
+      // 5xx during a cold start / spin-up is transient — keep retrying until the boot finishes.
       if (response.status >= 500 && attempt < maxAttempts) {
-        uploadStatus.textContent = "Server is waking up. Retrying your resume upload...";
-        await new Promise((resolve) => setTimeout(resolve, 4000));
+        await retryWithStatus();
         continue;
       }
 
@@ -970,13 +977,12 @@ async function extractResumeText(file) {
     } catch (error) {
       const wokeUpRetryable = error.name === "AbortError" || error instanceof TypeError;
       if (wokeUpRetryable && attempt < maxAttempts) {
-        uploadStatus.textContent = "Server is waking up. Retrying your resume upload...";
-        await new Promise((resolve) => setTimeout(resolve, 4000));
+        await retryWithStatus();
         continue;
       }
       console.warn("Resume extraction failed", error);
       uploadStatus.textContent =
-        "Could not read this file yet — the server may be waking up. Try again in a minute, or paste your resume text.";
+        "Could not read this file yet — the server may be waking up. Wait a minute and try again, or paste your resume text.";
       trackEvent("scan_failed", { reason: "resume_extract_failed" });
       resumeFileInput.value = "";
       return;
