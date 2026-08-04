@@ -52,9 +52,22 @@
       <artifactId>tika-core</artifactId>
       <version>2.9.2</version>
     </dependency>
+    <!-- Only the parser modules for formats the upload endpoint accepts (pdf, doc/docx, txt).
+         The full tika-parsers-standard-package pulls in parsers for hundreds of formats and
+         adds tens of MB to the jar, which slows cold starts badly on the 0.1-CPU free tier. -->
     <dependency>
       <groupId>org.apache.tika</groupId>
-      <artifactId>tika-parsers-standard-package</artifactId>
+      <artifactId>tika-parser-pdf-module</artifactId>
+      <version>2.9.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tika</groupId>
+      <artifactId>tika-parser-microsoft-module</artifactId>
+      <version>2.9.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tika</groupId>
+      <artifactId>tika-parser-text-module</artifactId>
       <version>2.9.2</version>
     </dependency>
     <dependency>

@@ -20,6 +20,12 @@ app:
     razorpay-key-secret: "${RAZORPAY_KEY_SECRET:}"
 
 spring:
+  main:
+    # Defer bean creation to first use: cuts startup time sharply on the 0.1-CPU free tier.
+    # Flyway is still initialized eagerly at boot (verified), so migration failures surface at
+    # startup as before. JPA/Hibernate init happens on the first DB-touching request instead,
+    # so the first request after a deploy is a little slower.
+    lazy-initialization: true
   servlet:
     multipart:
       max-file-size: 5MB
