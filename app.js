@@ -933,7 +933,7 @@ async function extractResumeText(file) {
     const timeoutId = setTimeout(() => controller.abort(), uploadTimeoutMs);
     const retryWithStatus = async () => {
       const waitMs = retryDelaysMs[attempt - 1] || 30000;
-      uploadStatus.textContent = `Server is waking up (this can take up to a minute). Retrying automatically... (${attempt}/${maxAttempts})`;
+      uploadStatus.textContent = `Free server is waking up (~30 sec) — retrying automatically (${attempt}/${maxAttempts}). In a hurry? Pasting your resume text below works instantly.`;
       await new Promise((resolve) => setTimeout(resolve, waitMs));
     };
     try {
