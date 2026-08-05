@@ -49,9 +49,25 @@ instance starts sleeping again. Liveness pinging avoids that failure mode.
 `/api/health/db` is for manual monitoring/alerting, not for keep-warm.
 
 Trade-off: pinging `/api/health` does not generate Supabase DB activity, so it does not
-prevent Supabase's 7-day idle pause. During an active beta, real scans keep Supabase
-active. If the app goes ~7 days with zero traffic, unpause Supabase manually from its
-dashboard (30 seconds). This is a much rarer/gentler event than Render's 15-min sleep.
+prevent Supabase's 7-day idle pause. This actually happened (Aug 2026): three quiet weeks
+paused Supabase, and the next deploy failed at boot with the pooler error
+`FATAL: (ENOTFOUND) tenant/user ... not found`. If you ever see that error, the fix is:
+unpause the Supabase project from its dashboard, then Manual Deploy on Render.
+
+### Second job: keep Supabase awake (low-frequency DB ping)
+
+To prevent the 7-day pause during zero-traffic stretches, add a SECOND cron-job.org job:
+
+- **Title:** JavaJobFit supabase keep-awake
+- **URL:** `https://java-job-fit.onrender.com/api/health/db`
+- **Schedule (custom):** `0 3,9,15,21 * * *` (4 pings/day, UTC, inside the warm window)
+- **Failure notifications:** OFF
+
+Why 4/day is safe where 10-minute DB pinging wasn't: a multi-hour outage produces only a
+couple of failures — far below cron-job.org's ~26-consecutive-failures auto-disable
+threshold — and each ping hits an already-warm instance (the main job keeps Render awake),
+so there are no cold-start timeouts. Each ping is a real DB query, which resets Supabase's
+idle clock.
 
 ## GitHub Actions workflow
 
