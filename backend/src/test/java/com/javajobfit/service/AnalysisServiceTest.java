@@ -69,6 +69,24 @@ class AnalysisServiceTest {
     }
 
     @Test
+    void missingKeywordAdviceUsesCorrectArticleBeforePlacement() {
+        String resume = "Summary: Java backend developer. Skills: Java, Spring Boot, REST APIs, SQL. "
+                + "Experience: Built Java Spring Boot REST APIs with SQL persistence and unit tests across releases.";
+        String jd = "Required: Java, Spring Boot, REST APIs, SQL, Kafka, Kubernetes, and Maven. Redis is a plus.";
+
+        List<String> missing = service.analyze(resume, jd, "oneToThree").getMissingKeywords();
+
+        assertThat(missing).isNotEmpty();
+        assertThat(missing).noneMatch(item -> item.contains("in an Project"));
+        assertThat(missing).noneMatch(item -> item.contains("in an Skills"));
+        assertThat(missing).allSatisfy(item -> {
+            if (item.contains("in a Experience") || item.contains("in an ")) {
+                assertThat(item).contains("in an Experience");
+            }
+        });
+    }
+
+    @Test
     void experienceEvidenceScoresHigherThanSkillsOnlyEvidence() {
         String jd = "Required: Java, Spring Boot, REST APIs, SQL, JUnit, Docker.";
         String skillsOnly = "Summary: Java developer profile. Skills: Java, Spring Boot, REST APIs, SQL, JUnit, Mockito, Docker, "

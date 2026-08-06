@@ -491,7 +491,8 @@ public class AnalysisService {
             if (output.size() >= 8) {
                 break;
             }
-            output.add(requirement.label + " — add truthful proof in an " + placementFor(requirement));
+            String placement = placementFor(requirement);
+            output.add(requirement.label + " — add truthful proof in " + articleFor(placement) + " " + placement);
         }
         for (KeywordRequirement keyword : keywordReqs) {
             if (output.size() >= 8) {
@@ -502,6 +503,13 @@ public class AnalysisService {
             }
         }
         return output;
+    }
+
+    private String articleFor(String phrase) {
+        if (phrase == null || phrase.isEmpty()) {
+            return "a";
+        }
+        return "aeiou".indexOf(Character.toLowerCase(phrase.charAt(0))) >= 0 ? "an" : "a";
     }
 
     private String placementFor(Requirement requirement) {
