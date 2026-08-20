@@ -119,6 +119,17 @@ inside the 04:00–07:59 sleep window**, so once a day it wakes the instance ear
 timeout failure. Harmless (the request still reaches Render and the DB query still runs;
 cron just stops waiting for the reply), but switching to `0 2,8,14,20 * * *` removes it.
 
+**Update (20 Aug 2026): tiny reads were not enough.** Supabase sent a "project is going to
+be paused" warning even while this job was successfully running `select 1` through the
+pooler 3-4x/day — small reads evidently sit below their "sufficient activity" heuristic.
+`/api/health/db` therefore now also INSERTS one `db_keepalive` row into the events table
+(throttled to at most one write per 4 hours, so the unlimited GET cannot bloat the table).
+Writes are unambiguous user database activity.
+
+**If a pause-warning email ever arrives anyway:** open the Supabase dashboard SQL editor and
+run any query (e.g. `select count(*) from events;`) — dashboard activity resets the idle
+clock immediately and buys 7 days while you investigate.
+
 Why 4/day is safe where 10-minute DB pinging wasn't: a multi-hour outage produces only a
 couple of failures — far below cron-job.org's ~26-consecutive-failures auto-disable
 threshold — and each ping hits an already-warm instance (the main job keeps Render awake),
