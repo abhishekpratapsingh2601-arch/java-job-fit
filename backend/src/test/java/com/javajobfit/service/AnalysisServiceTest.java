@@ -237,6 +237,15 @@ class AnalysisServiceTest {
         generated.addAll(result.getInterviewQuestions());
         generated.addAll(result.getPrepPlan());
         generated.add(result.getScoreSummary());
+        // Premium sections are persisted like every other generated field, so the canary and
+        // leak assertions must cover them too — otherwise a new section could quietly become a
+        // path for raw resume text to reach the database.
+        PremiumContent premium = result.getPremiumContent();
+        generated.add(premium.getResumeSummary());
+        generated.add(premium.getCoverLetter());
+        generated.addAll(premium.getKeywordPlacements());
+        generated.add(premium.getLinkedinHeadline());
+        generated.add(premium.getLinkedinAbout());
         return String.join(" ", generated).toLowerCase();
     }
 }

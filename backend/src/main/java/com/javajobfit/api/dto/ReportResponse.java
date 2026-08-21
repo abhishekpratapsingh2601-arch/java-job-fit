@@ -31,6 +31,11 @@ public class ReportResponse {
     private boolean freePreview;
     private boolean premiumAvailable;
     private List<String> premiumLockedSections;
+    private String resumeSummary;
+    private String coverLetter;
+    private List<String> keywordPlacements;
+    private String linkedinHeadline;
+    private String linkedinAbout;
     private String experienceLevel;
     private Instant createdAt;
 
@@ -248,5 +253,45 @@ public class ReportResponse {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getResumeSummary() {
+        return resumeSummary;
+    }
+
+    public void setResumeSummary(String resumeSummary) {
+        this.resumeSummary = resumeSummary;
+    }
+
+    public String getCoverLetter() {
+        return coverLetter;
+    }
+
+    public void setCoverLetter(String coverLetter) {
+        this.coverLetter = coverLetter;
+    }
+
+    public List<String> getKeywordPlacements() {
+        return keywordPlacements;
+    }
+
+    public void setKeywordPlacements(List<String> keywordPlacements) {
+        this.keywordPlacements = keywordPlacements;
+    }
+
+    public String getLinkedinHeadline() {
+        return linkedinHeadline;
+    }
+
+    public void setLinkedinHeadline(String linkedinHeadline) {
+        this.linkedinHeadline = linkedinHeadline;
+    }
+
+    public String getLinkedinAbout() {
+        return linkedinAbout;
+    }
+
+    public void setLinkedinAbout(String linkedinAbout) {
+        this.linkedinAbout = linkedinAbout;
     }
 }

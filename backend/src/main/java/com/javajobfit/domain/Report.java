@@ -51,6 +51,21 @@ public class Report {
     @Column(columnDefinition = "TEXT")
     private String scoreBreakdown;
 
+    @Column(name = "resume_summary", columnDefinition = "TEXT")
+    private String resumeSummary;
+
+    @Column(name = "cover_letter", columnDefinition = "TEXT")
+    private String coverLetter;
+
+    @Column(name = "keyword_placements", columnDefinition = "TEXT")
+    private String keywordPlacements;
+
+    @Column(name = "linkedin_headline", columnDefinition = "TEXT")
+    private String linkedinHeadline;
+
+    @Column(name = "linkedin_about", columnDefinition = "TEXT")
+    private String linkedinAbout;
+
     @Column(nullable = false)
     private boolean paid;
 
@@ -158,6 +173,46 @@ public class Report {
 
     public void setScoreBreakdown(String scoreBreakdown) {
         this.scoreBreakdown = scoreBreakdown;
+    }
+
+    public String getResumeSummary() {
+        return resumeSummary;
+    }
+
+    public void setResumeSummary(String resumeSummary) {
+        this.resumeSummary = resumeSummary;
+    }
+
+    public String getCoverLetter() {
+        return coverLetter;
+    }
+
+    public void setCoverLetter(String coverLetter) {
+        this.coverLetter = coverLetter;
+    }
+
+    public String getKeywordPlacements() {
+        return keywordPlacements;
+    }
+
+    public void setKeywordPlacements(String keywordPlacements) {
+        this.keywordPlacements = keywordPlacements;
+    }
+
+    public String getLinkedinHeadline() {
+        return linkedinHeadline;
+    }
+
+    public void setLinkedinHeadline(String linkedinHeadline) {
+        this.linkedinHeadline = linkedinHeadline;
+    }
+
+    public String getLinkedinAbout() {
+        return linkedinAbout;
+    }
+
+    public void setLinkedinAbout(String linkedinAbout) {
+        this.linkedinAbout = linkedinAbout;
     }
 
     public boolean isPaid() {

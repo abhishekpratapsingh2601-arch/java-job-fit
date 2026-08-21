@@ -17,16 +17,17 @@ import com.javajobfit.repository.ReportRepository;
 @Service
 public class ReportService {
     private static final String LIST_SEPARATOR = "\n---ITEM---\n";
+    // Advertised premium sections. Every entry here must correspond to content the analyzer
+    // actually generates — a promise the paid report cannot keep is a refund request.
     private static final List<String> PREMIUM_LOCKED_SECTIONS = Arrays.asList(
-            "Full keyword analysis",
-            "10+ resume bullet upgrades",
-            "Keyword placement suggestions",
+            "Full keyword gap list",
+            "10+ tailored resume bullet rewrites",
+            "Keyword placement guide (which section each keyword belongs in)",
             "Tailored Java/Spring Boot resume summary",
             "Full Java interview question set",
             "Full 7-day prep plan",
             "Cover letter draft",
-            "LinkedIn headline/About rewrite",
-            "Export full PDF/DOCX report");
+            "LinkedIn headline and About rewrite");
 
     private final AnalysisService analysisService;
     private final ReportRepository reportRepository;
@@ -53,6 +54,13 @@ public class ReportService {
         report.setInterviewQuestions(join(result.getInterviewQuestions()));
         report.setPrepPlan(join(result.getPrepPlan()));
         report.setScoreBreakdown(encodeBreakdown(result.getScoreBreakdown()));
+
+        PremiumContent premium = result.getPremiumContent();
+        report.setResumeSummary(premium.getResumeSummary());
+        report.setCoverLetter(premium.getCoverLetter());
+        report.setKeywordPlacements(join(premium.getKeywordPlacements()));
+        report.setLinkedinHeadline(premium.getLinkedinHeadline());
+        report.setLinkedinAbout(premium.getLinkedinAbout());
 
         return toResponse(reportRepository.save(report));
     }
@@ -109,6 +117,13 @@ public class ReportService {
         // the locked-section list disappear for paid reports.
         response.setPremiumAvailable(!paid);
         response.setPremiumLockedSections(paid ? Collections.emptyList() : PREMIUM_LOCKED_SECTIONS);
+        // Premium-only sections are withheld outright rather than truncated: a free response
+        // must never carry a preview of content someone is expected to pay for.
+        response.setResumeSummary(paid ? report.getResumeSummary() : null);
+        response.setCoverLetter(paid ? report.getCoverLetter() : null);
+        response.setKeywordPlacements(paid ? split(report.getKeywordPlacements()) : Collections.emptyList());
+        response.setLinkedinHeadline(paid ? report.getLinkedinHeadline() : null);
+        response.setLinkedinAbout(paid ? report.getLinkedinAbout() : null);
         response.setExperienceLevel(report.getExperienceLevel());
         response.setCreatedAt(report.getCreatedAt());
         return response;

@@ -12,6 +12,7 @@ public class AnalysisResult {
     private final List<String> interviewQuestions;
     private final List<String> prepPlan;
     private final ScoreBreakdown scoreBreakdown;
+    private final PremiumContent premiumContent;
 
     public AnalysisResult(
             int score,
@@ -22,7 +23,8 @@ public class AnalysisResult {
             List<String> bulletSuggestions,
             List<String> interviewQuestions,
             List<String> prepPlan,
-            ScoreBreakdown scoreBreakdown) {
+            ScoreBreakdown scoreBreakdown,
+            PremiumContent premiumContent) {
         this.score = score;
         this.scoreSummary = scoreSummary;
         this.matchedSkills = matchedSkills;
@@ -32,6 +34,11 @@ public class AnalysisResult {
         this.interviewQuestions = interviewQuestions;
         this.prepPlan = prepPlan;
         this.scoreBreakdown = scoreBreakdown;
+        this.premiumContent = premiumContent == null ? PremiumContent.empty() : premiumContent;
+    }
+
+    public PremiumContent getPremiumContent() {
+        return premiumContent;
     }
 
     public int getScore() {

@@ -18,6 +18,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class AnalysisService {
     static final int FREE_MISSING_LIMIT = 5;
+    // Paid reports advertise "10+ tailored resume bullet rewrites"; this bounds the upper end so
+    // a keyword-stuffed JD cannot produce an unreadable wall of bullets.
+    private static final int MAX_BULLETS = 16;
 
     private static final Pattern PRIVATE_MARKER = Pattern.compile(
             "(do[_-]?not[_-]?store|beta[_-]?canary|canary|resume[_-]?marker|jd[_-]?marker)[a-z0-9_-]*",
@@ -202,7 +205,13 @@ public class AnalysisService {
                 sanitizeList(bullets),
                 sanitizeList(questions),
                 sanitizeList(plan),
-                breakdown);
+                breakdown,
+                new PremiumContent(
+                        sanitize(buildResumeSummary(matchedReqs, missingReqs, experienceLevel)),
+                        sanitize(buildCoverLetter(matchedReqs, missingReqs, experienceLevel)),
+                        sanitizeList(buildKeywordPlacements(matchedReqs, missingReqs)),
+                        sanitize(buildLinkedinHeadline(matchedReqs, experienceLevel)),
+                        sanitize(buildLinkedinAbout(matchedReqs, missingReqs, experienceLevel))));
     }
 
     private AnalysisResult emptyResult() {
@@ -216,7 +225,8 @@ public class AnalysisService {
                 Arrays.asList("Add truthful Java backend project or work evidence once a target JD is available."),
                 Arrays.asList("Which Java/Spring Boot topics does the target job require?"),
                 Arrays.asList("Day 1: Paste a target job description and rerun the scan."),
-                breakdown);
+                breakdown,
+                PremiumContent.empty());
     }
 
     private List<Requirement> extractSkillRequirements(String normalizedJob, List<String> jobSegments, ResumeProfile profile) {
@@ -571,13 +581,123 @@ public class AnalysisService {
             bullets.add("Built Java backend features using " + String.join(", ", strong)
                     + " with clear ownership, test coverage, and production-ready error handling.");
         }
-        Requirement firstMissing = missing.isEmpty() ? null : missing.get(0);
-        if (firstMissing != null) {
-            bullets.add("If true, add a " + firstMissing.label + " bullet for a " + role
-                    + " role: describe the API/service, context, testing, and measurable result.");
-        }
         bullets.add("Built Spring Boot REST APIs for customer onboarding with DTO validation, centralized exception handling, JPA persistence, and JUnit/Mockito service tests.");
-        return bullets;
+
+        // Premium depth: one skill-specific rewrite per skill this JD names, proven strengths
+        // first, then the gaps. Templates only — never the user's own sentences — so nothing
+        // derived from raw resume text is ever persisted.
+        Set<String> rewritten = new LinkedHashSet<>();
+        for (Requirement requirement : orderedForBullets(matched, missing)) {
+            if (bullets.size() >= MAX_BULLETS - 1) {
+                break; // leave room for the closing bullet below
+            }
+            if (rewritten.add(requirement.label)) {
+                bullets.add(skillBullet(requirement, role));
+            }
+        }
+        bullets.add("Quantify one bullet per role: replace \"improved performance\" with the number "
+                + "(p99 latency, requests/sec, error rate, build time, cost) and the change you caused.");
+        return bullets.stream().distinct().collect(Collectors.toList());
+    }
+
+    /**
+     * Skills worth a dedicated bullet: proven strengths first, then every gap the JD named.
+     *
+     * <p>Deliberately not filtered by {@link RequirementType}. A JD that lists ten skills in one
+     * comma run often has most of them classified NEUTRAL rather than REQUIRED, and filtering on
+     * type dropped Kafka, Kubernetes and AWS from a job description that asked for all three by
+     * name. For a paid report, every skill the JD mentions earns its own rewrite.
+     */
+    private List<Requirement> orderedForBullets(List<Requirement> matched, List<Requirement> missing) {
+        List<Requirement> ordered = new ArrayList<>(matched);
+        ordered.addAll(missing);
+        return ordered;
+    }
+
+    /**
+     * A concrete, ATS-friendly bullet template per skill, falling back to a labelled generic
+     * template so every skill the JD names gets a usable rewrite.
+     */
+    private String skillBullet(Requirement requirement, String role) {
+        String label = requirement.label;
+        boolean proven = requirement.isCovered();
+        String prefix = proven
+                ? "Strengthen your existing " + label + " bullet: "
+                : "If true, add " + articleFor(label) + " " + label + " bullet: ";
+        switch (label) {
+            case "Spring Boot":
+                return prefix + "\"Developed N Spring Boot services with profile-based config, "
+                        + "actuator health checks, and centralized exception handling, cutting incident triage time by X%.\"";
+            case "REST APIs":
+                return prefix + "\"Designed N REST endpoints with DTO validation, pagination, and versioning, "
+                        + "serving X requests/day at p99 under Y ms.\"";
+            case "Kafka":
+                return prefix + "\"Built Kafka consumers with consumer groups, idempotent handling, retry topics, "
+                        + "and a dead-letter queue, processing X events/day with zero data loss.\"";
+            case "Microservices":
+                return prefix + "\"Split a monolith into N Spring Boot services with independent deploys, "
+                        + "reducing release lead time from X to Y.\"";
+            case "SQL":
+            case "PostgreSQL":
+                return prefix + "\"Tuned PostgreSQL queries with composite indexes and query plan analysis, "
+                        + "cutting p99 read latency from X ms to Y ms.\"";
+            case "Hibernate/JPA":
+                return prefix + "\"Modelled N JPA entities with explicit fetch strategies, eliminating N+1 queries "
+                        + "and reducing endpoint response time by X%.\"";
+            case "Docker":
+                return prefix + "\"Containerized N Java services with multi-stage Docker builds, "
+                        + "shrinking images from X MB to Y MB and cold start from A s to B s.\"";
+            case "Kubernetes":
+                return prefix + "\"Deployed N services to Kubernetes with liveness/readiness probes and resource limits, "
+                        + "holding X% availability across Y releases.\"";
+            case "AWS":
+                return prefix + "\"Ran Java services on AWS (EC2/ECS, RDS, S3) with CloudWatch alerting, "
+                        + "supporting X users at Y monthly cost.\"";
+            case "CI/CD":
+                return prefix + "\"Automated build, test, and deploy pipelines, taking releases from manual "
+                        + "to N per week and cutting build time from X to Y minutes.\"";
+            case "JUnit":
+            case "Mockito":
+            case "Integration testing":
+                return prefix + "\"Raised service-layer coverage to X% with JUnit 5 and Mockito, "
+                        + "catching N regressions before release.\"";
+            case "Redis":
+                return prefix + "\"Added Redis caching with TTL and invalidation for hot read paths, "
+                        + "cutting database load by X% and p99 latency by Y ms.\"";
+            case "Query optimization":
+                return prefix + "\"Profiled the N slowest endpoints and rewrote their queries, "
+                        + "reducing average response time from X ms to Y ms.\"";
+            case "Event-driven architecture":
+                return prefix + "\"Replaced N synchronous calls with events, decoupling services and "
+                        + "absorbing X% traffic spikes without timeouts.\"";
+            case "Observability":
+                return prefix + "\"Instrumented N services with structured logs, metrics, and traces, "
+                        + "cutting mean time to detection from X to Y minutes.\"";
+            case "Production support":
+            case "Debugging":
+                return prefix + "\"Owned on-call for N services, resolving X incidents and shipping "
+                        + "the follow-up fixes that removed the recurring cause.\"";
+            case "Git":
+            case "Code review":
+                return prefix + "\"Reviewed N pull requests per week, catching X defects pre-merge and "
+                        + "documenting the patterns the team kept repeating.\"";
+            case "Spring Security":
+                return prefix + "\"Secured N endpoints with Spring Security and JWT, adding role checks "
+                        + "and cutting unauthorized access attempts to zero in audit logs.\"";
+            case "Concurrency":
+                return prefix + "\"Parallelized a batch job with ExecutorService and bounded queues, "
+                        + "reducing runtime from X to Y while keeping memory under Z MB.\"";
+            case "System design":
+            case "Distributed systems":
+            case "Scalability":
+                return prefix + "\"Owned the design for a service handling X requests/sec, documenting "
+                        + "trade-offs on consistency, caching, and failure handling for a " + role + " audience.\"";
+            default:
+                // Every skill the JD names earns a rewrite, even without a bespoke template —
+                // a paid report should not silently skip one.
+                return prefix + "name the service, what you actually did with " + label
+                        + ", and the measurable result (\"[what changed] from X to Y\").";
+        }
     }
 
     private List<String> buildQuestions(List<Requirement> missing, List<Requirement> matched, String experienceLevel) {
@@ -598,7 +718,61 @@ public class AnalysisService {
             questions.add("Describe a backend architecture decision you led, including tradeoffs and production impact.");
         }
         questions.add("How would you debug a slow Java API in production without exposing user data?");
-        return questions.stream().distinct().limit(7).collect(Collectors.toList());
+
+        // Premium depth: a real question per skill this JD names, so the paid set is driven by
+        // the job rather than a fixed handful.
+        for (Requirement requirement : orderedForBullets(matched, missing)) {
+            String question = skillQuestion(requirement.label);
+            if (question != null) {
+                questions.add(question);
+            }
+        }
+        questions.add("Walk through a production incident you handled: detection, diagnosis, fix, and what you changed afterwards.");
+        questions.add("How do you decide what to unit test, what to integration test, and what to leave to manual checks?");
+        return questions.stream().distinct().limit(12).collect(Collectors.toList());
+    }
+
+    /** One substantive question per skill; null when the skill has no specific question. */
+    private String skillQuestion(String label) {
+        switch (label) {
+            case "Spring Boot":
+                return "How does Spring Boot dependency injection resolve ambiguity, and when do you reach for @Qualifier, @Primary, or profiles?";
+            case "REST APIs":
+                return "How do you version a public REST API without breaking existing clients?";
+            case "Kafka":
+                return "A Kafka consumer is lagging badly in production. How do you diagnose and fix it?";
+            case "Microservices":
+                return "How do you handle a transaction that spans two microservices?";
+            case "SQL":
+            case "PostgreSQL":
+                return "Given a slow query, walk through how you read the execution plan and decide on an index.";
+            case "Hibernate/JPA":
+                return "What causes the N+1 select problem in JPA, and what are the ways to fix it?";
+            case "Docker":
+                return "Why does a Java container get OOM-killed even when heap usage looks fine?";
+            case "Kubernetes":
+                return "What is the difference between a liveness and a readiness probe, and what breaks if you confuse them?";
+            case "AWS":
+                return "How would you keep credentials out of a Java service running on AWS?";
+            case "CI/CD":
+                return "How do you make a deployment safely reversible?";
+            case "JUnit":
+            case "Mockito":
+            case "Integration testing":
+                return "How do you test code that depends on time, randomness, or an external HTTP call?";
+            case "Redis":
+                return "How do you keep a cache from serving stale data, and what is your invalidation strategy?";
+            case "Concurrency":
+                return "Explain the difference between synchronized, ReentrantLock, and an atomic variable, with a case for each.";
+            case "Spring Security":
+                return "How do you prevent SQL injection and validate untrusted input in a Spring Boot API, and how do you handle auth?";
+            case "System design":
+            case "Distributed systems":
+            case "Scalability":
+                return "Design a service that must stay available when its database is briefly unreachable. What degrades?";
+            default:
+                return null;
+        }
     }
 
     private List<String> buildPlan(List<Requirement> missing, List<Requirement> matched, String experienceLevel) {
@@ -616,6 +790,116 @@ public class AnalysisService {
                 "Day 5: Review SQL/JPA transactions, query tuning, indexes, and common persistence pitfalls.",
                 "Day 6: Practice testing, debugging, CI/CD, Git, Docker, and production support questions.",
                 "Day 7: Run a mock interview using the JD stack and rewrite any weak resume bullets before applying.");
+    }
+
+    /**
+     * Premium sections built purely from derived signals — skill labels from our own taxonomy,
+     * the experience level, and the score. They never quote the resume or job description, so
+     * no raw user text can reach the database through them (see the canary tests).
+     */
+    private String buildResumeSummary(List<Requirement> matched, List<Requirement> missing, String experienceLevel) {
+        String role = copyFor(experienceLevel).role;
+        List<String> strengths = topLabels(matched, 4);
+        List<String> targets = topLabels(missing, 2);
+        StringBuilder summary = new StringBuilder();
+        summary.append(capitalize(role)).append(" focused on ");
+        summary.append(strengths.isEmpty() ? "Java, Spring Boot, and REST API delivery" : joinReadable(strengths));
+        summary.append(". Comfortable owning services end to end: API design, persistence, testing, and production support.");
+        if (!targets.isEmpty()) {
+            summary.append(" Currently deepening ").append(joinReadable(targets))
+                    .append(" — only claim this once you have something truthful to point at.");
+        }
+        summary.append(" Replace the bracketed numbers with your real figures before sending.");
+        return summary.toString();
+    }
+
+    private List<String> buildKeywordPlacements(List<Requirement> matched, List<Requirement> missing) {
+        List<String> placements = new ArrayList<>();
+        for (Requirement requirement : missing) {
+            if (placements.size() >= 10) {
+                break;
+            }
+            placements.add(requirement.label + " -> " + placementFor(requirement)
+                    + ". An ATS reads section headings, so a keyword only in a Skills list scores weaker than the same keyword inside a dated bullet.");
+        }
+        for (Requirement requirement : matched) {
+            if (placements.size() >= 14) {
+                break;
+            }
+            if (requirement.evidenceLevel == EvidenceLevel.WEAK || requirement.evidenceLevel == EvidenceLevel.MEDIUM) {
+                placements.add(requirement.label
+                        + " -> currently only a weak mention. Move it into an Experience or Projects bullet with a result attached.");
+            }
+        }
+        if (placements.isEmpty()) {
+            placements.add("Your keyword placement already looks reasonable. Keep the strongest Java evidence in the top third of page one.");
+        }
+        return placements;
+    }
+
+    private String buildCoverLetter(List<Requirement> matched, List<Requirement> missing, String experienceLevel) {
+        String role = copyFor(experienceLevel).role;
+        List<String> strengths = topLabels(matched, 3);
+        List<String> gaps = topLabels(missing, 2);
+        StringBuilder letter = new StringBuilder();
+        letter.append("Dear [Hiring Manager],\n\n");
+        letter.append("I am applying for the [Job Title] role at [Company]. I work as a ").append(role)
+                .append(", and the parts of this job description I can speak to directly are ")
+                .append(strengths.isEmpty() ? "Java and Spring Boot backend development" : joinReadable(strengths))
+                .append(".\n\n");
+        letter.append("In my current role I [describe one service you own] — [what it does], "
+                + "[the scale: requests/day, users, or data volume], and [one measurable result]. "
+                + "I would bring the same ownership to this team: designing the API, writing the tests, "
+                + "and staying on the hook when it runs in production.\n\n");
+        if (!gaps.isEmpty()) {
+            letter.append("Your description also mentions ").append(joinReadable(gaps))
+                    .append(". I have not shipped that at production scale yet; I have been working through it in "
+                            + "[course, side project, or internal work], and I would rather be straight with you about "
+                            + "where the line is than overstate it.\n\n");
+        }
+        letter.append("Thanks for your time — I would welcome the chance to talk through the details.\n\n");
+        letter.append("[Your Name]\n[Phone] | [Email] | [GitHub/LinkedIn]");
+        return letter.toString();
+    }
+
+    private String buildLinkedinHeadline(List<Requirement> matched, String experienceLevel) {
+        List<String> strengths = topLabels(matched, 3);
+        String base = capitalize(copyFor(experienceLevel).role);
+        return strengths.isEmpty()
+                ? base + " | Java, Spring Boot, REST APIs | Building and supporting backend services"
+                : base + " | " + String.join(", ", strengths) + " | Building and supporting backend services";
+    }
+
+    private String buildLinkedinAbout(List<Requirement> matched, List<Requirement> missing, String experienceLevel) {
+        String role = copyFor(experienceLevel).role;
+        List<String> strengths = topLabels(matched, 4);
+        List<String> targets = topLabels(missing, 2);
+        StringBuilder about = new StringBuilder();
+        about.append("I am a ").append(role).append(" working mostly in ")
+                .append(strengths.isEmpty() ? "Java and Spring Boot" : joinReadable(strengths)).append(".\n\n");
+        about.append("What I actually do day to day: design REST endpoints, model the data, write the tests, "
+                + "and fix it when it breaks in production. [Add one sentence about the domain you work in.]\n\n");
+        about.append("Recent work: [one service or project], [the scale it runs at], [one result you can defend in an interview].\n\n");
+        if (!targets.isEmpty()) {
+            about.append("Currently learning: ").append(joinReadable(targets)).append(".\n\n");
+        }
+        about.append("Open to backend roles. Reach me at [email].");
+        return about.toString();
+    }
+
+    private List<String> topLabels(List<Requirement> requirements, int limit) {
+        return requirements.stream().map(r -> r.label).distinct().limit(limit).collect(Collectors.toList());
+    }
+
+    private String joinReadable(List<String> values) {
+        if (values.size() <= 1) {
+            return values.isEmpty() ? "" : values.get(0);
+        }
+        return String.join(", ", values.subList(0, values.size() - 1)) + " and " + values.get(values.size() - 1);
+    }
+
+    private String capitalize(String value) {
+        return value == null || value.isEmpty() ? value : Character.toUpperCase(value.charAt(0)) + value.substring(1);
     }
 
     private String buildScoreSummary(
@@ -786,6 +1070,16 @@ public class AnalysisService {
 
     private int clamp(int value, int min, int max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    /** Same private-marker scrubbing as {@link #sanitizeList}, for single-string sections. */
+    private String sanitize(String value) {
+        if (value == null) {
+            return "";
+        }
+        // Collapse runs of spaces/tabs but keep newlines: the cover letter and LinkedIn About
+        // are multi-paragraph and lose their shape otherwise.
+        return PRIVATE_MARKER.matcher(value).replaceAll("").replaceAll("[ \\t]+", " ").trim();
     }
 
     private List<String> sanitizeList(List<String> values) {
