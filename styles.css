@@ -1308,3 +1308,9 @@ li {
 .premium-section {
   border-left: 3px solid var(--accent);
 }
+
+/* Policy cross-links at the foot of each legal page. */
+.legal-nav {
+  margin-top: 1.75rem;
+  line-height: 2;
+}
