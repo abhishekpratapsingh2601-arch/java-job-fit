@@ -745,6 +745,28 @@ function renderResults(report) {
   emptyState.hidden = true;
   scanProgress.hidden = true;
   results.hidden = false;
+  rememberReportInUrl(latestReport);
+}
+
+/**
+ * Puts a saved report's id in the address bar so the URL is the user's receipt: it can be
+ * bookmarked, revisited, and pasted at an international checkout that unlocks reports by id.
+ * Browser-fallback previews have no id and are skipped. Existing params (utm_*, source) are
+ * preserved so analytics attribution survives.
+ */
+function rememberReportInUrl(report) {
+  if (!report || !report.id || !report.saved) return;
+  if (!window.history || typeof window.history.replaceState !== "function") return;
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("report") === report.id) return;
+    url.searchParams.set("report", report.id);
+    // "paid=1" is only meaningful on the return trip from checkout; drop it once rendered.
+    url.searchParams.delete("paid");
+    window.history.replaceState({}, "", url.toString());
+  } catch (error) {
+    // A hostile/opaque URL is not worth failing a rendered report over.
+  }
 }
 
 function scrollToResults() {
@@ -1194,20 +1216,40 @@ async function refreshReportAfterPayment(publicId) {
   return false;
 }
 
-function resumeAfterPaymentRedirect() {
+/**
+ * Handles arriving with a report id in the URL — either a bookmark/shared link, or the return
+ * trip from checkout. With paid=1 we poll briefly, because the unlock webhook can land a moment
+ * after the redirect; without it we just render whatever the server says the report is.
+ */
+async function openReportFromUrl() {
   const params = new URLSearchParams(window.location.search);
   let publicId = params.get("report");
-  if (!publicId) {
+  const returningFromCheckout = params.get("paid") === "1";
+  if (!publicId && returningFromCheckout) {
     try {
       publicId = window.sessionStorage.getItem("javajobfit_pending_report");
     } catch (storageError) {
       publicId = null;
     }
   }
-  if (!publicId || params.get("paid") !== "1") return;
-  premiumModal.hidden = false;
-  applyPaymentAvailability();
-  refreshReportAfterPayment(publicId);
+  if (!publicId) return;
+
+  if (returningFromCheckout) {
+    premiumModal.hidden = false;
+    applyPaymentAvailability();
+    await refreshReportAfterPayment(publicId);
+    return;
+  }
+
+  // Plain revisit: show the report as it stands (free or unlocked).
+  try {
+    const response = await fetch(`${apiBase}/api/reports/${encodeURIComponent(publicId)}`);
+    if (response.ok) {
+      renderResults(await response.json());
+    }
+  } catch (error) {
+    // Backend asleep or link stale: leave the empty state, the user can rescan.
+  }
 }
 
 function closePremiumModal() {
@@ -1475,4 +1517,4 @@ if (pricingSection && "IntersectionObserver" in window) {
 
 // Warm the free-tier backend on initial load so the first scan/upload avoids a cold start.
 warmBackend();
-loadPaymentConfig().then(resumeAfterPaymentRedirect);
+loadPaymentConfig().then(openReportFromUrl);
