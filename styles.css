@@ -1291,3 +1291,20 @@ li {
     transform: rotate(-360deg);
   }
 }
+
+/* Pro sections: only rendered for a paid report. */
+.draft-block {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+}
+
+.premium-section {
+  border-left: 3px solid var(--accent);
+}

@@ -27,6 +27,21 @@ public class ApiExceptionHandler {
         return Collections.singletonMap("error", exception.getMessage());
     }
 
+    @ExceptionHandler(com.javajobfit.service.PaymentService.InvalidWebhookSignatureException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public Map<String, String> handleInvalidWebhookSignature(
+            com.javajobfit.service.PaymentService.InvalidWebhookSignatureException exception) {
+        // No detail in the body: an attacker probing the webhook learns nothing about why it failed.
+        return Collections.singletonMap("error", "Invalid signature.");
+    }
+
+    @ExceptionHandler(com.javajobfit.service.PaymentService.AlreadyPaidException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Map<String, String> handleAlreadyPaid(
+            com.javajobfit.service.PaymentService.AlreadyPaidException exception) {
+        return Collections.singletonMap("error", "This report is already unlocked.");
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, Object> handleValidation(MethodArgumentNotValidException exception) {

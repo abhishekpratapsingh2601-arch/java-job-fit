@@ -259,7 +259,38 @@
                 <button type="button" class="copy-action" id="copy-plan">Copy</button>
               </div>
               <ol id="plan-list"></ol>
-              <p class="preview-note">Free preview shows the first steps. Full prep plan is part of Pro.</p>
+              <p class="preview-note" id="plan-preview-note">Free preview shows the first steps. Full prep plan is part of Pro.</p>
+            </article>
+
+            <!-- Pro sections: hidden until the backend confirms this report is paid. -->
+            <article class="result-card wide premium-section" id="premium-summary-card" hidden>
+              <div class="card-heading">
+                <h3>Tailored resume summary</h3>
+                <button type="button" class="copy-action" id="copy-summary">Copy</button>
+              </div>
+              <p id="premium-summary"></p>
+            </article>
+
+            <article class="result-card wide premium-section" id="premium-placements-card" hidden>
+              <h3>Keyword placement guide</h3>
+              <ul id="premium-placements"></ul>
+            </article>
+
+            <article class="result-card wide premium-section" id="premium-cover-card" hidden>
+              <div class="card-heading">
+                <h3>Cover letter draft</h3>
+                <button type="button" class="copy-action" id="copy-cover">Copy</button>
+              </div>
+              <pre class="draft-block" id="premium-cover"></pre>
+            </article>
+
+            <article class="result-card wide premium-section" id="premium-linkedin-card" hidden>
+              <div class="card-heading">
+                <h3>LinkedIn headline and About</h3>
+                <button type="button" class="copy-action" id="copy-linkedin">Copy</button>
+              </div>
+              <p><strong>Headline:</strong> <span id="premium-linkedin-headline"></span></p>
+              <pre class="draft-block" id="premium-linkedin-about"></pre>
             </article>
 
             <article class="result-card wide score-breakdown-card">
@@ -491,34 +522,39 @@
     <div class="modal-backdrop" id="premium-modal" hidden>
       <section class="modal" role="dialog" aria-modal="true" aria-labelledby="premium-modal-title">
         <button type="button" class="modal-close" id="premium-close" aria-label="Close early access modal">×</button>
-        <p class="eyebrow">Coming soon / Early access</p>
+        <p class="eyebrow">Launch offer</p>
         <h2 id="premium-modal-title">Unlock the full JavaJobFit Pro Report</h2>
         <div class="price-list">
-          <p><strong>India:</strong> ₹89 one-time</p>
-          <p><strong>US/International:</strong> $9.99 one-time</p>
-          <p><strong>Monthly:</strong> ₹499/month or $19/month</p>
+          <p>
+            <strong><s>₹299</s> ₹<span id="premium-price">89</span> one-time</strong>
+            — for this report, no subscription.
+          </p>
         </div>
         <ul>
-          <li>Full keyword analysis</li>
-          <li>10+ Java resume bullet upgrades</li>
-          <li>Keyword placement suggestions</li>
-          <li>Full Java/Spring Boot interview questions</li>
+          <li>Full keyword gap list</li>
+          <li>10+ tailored resume bullet rewrites</li>
+          <li>Keyword placement guide (which section each keyword belongs in)</li>
+          <li>Tailored Java/Spring Boot resume summary</li>
+          <li>Full Java interview question set</li>
           <li>Full 7-day prep plan</li>
           <li>Cover letter draft</li>
-          <li>LinkedIn headline/About rewrite</li>
-          <li>Export full report</li>
+          <li>LinkedIn headline and About rewrite</li>
         </ul>
-        <p>
-          Payments are not live yet. Join early access and we will notify you when Pro report unlock is available.
-        </p>
+        <p id="premium-status" role="status" aria-live="polite"></p>
         <div class="modal-actions">
+          <button type="button" class="primary-action" id="premium-pay">Unlock for ₹<span id="premium-pay-price">89</span></button>
+          <button type="button" class="secondary-action" id="notify-pro">Maybe later</button>
+        </div>
+        <p class="fine-print" id="premium-unavailable" hidden>
+          Payments are not live yet. Join early access below and we will notify you when Pro unlock opens.
+        </p>
+        <div class="modal-actions" id="premium-early-access" hidden>
           <button type="button" class="primary-action" id="join-early-access">Join early access</button>
-          <button type="button" class="secondary-action" id="notify-pro">Notify me when Pro is live</button>
         </div>
       </section>
     </div>
 
     <script src="config.js?v=20260601-ats2"></script>
-    <script src="app.js?v=20260701-upload-status"></script>
+    <script src="app.js?v=20260822-payments"></script>
   </body>
 </html>

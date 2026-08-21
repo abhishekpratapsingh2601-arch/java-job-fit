@@ -19,3 +19,17 @@ Do not set SPRING_FLYWAY_BASELINE_ON_MIGRATE=true for this first deploy because 
 application-prod.yml already pins:
 DATABASE_DRIVER=org.postgresql.Driver
 HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+
+# Payments (Session B). Leave PAYMENT_PROVIDER_ENABLED=false until the Razorpay account is live:
+# while false the payment endpoints return 503 and no Razorpay call is ever made.
+PAYMENT_PROVIDER_ENABLED=false
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+# From the Razorpay dashboard webhook you create for payment_link.paid. Without it, every
+# webhook is rejected as unsigned, so nothing can ever be unlocked.
+RAZORPAY_WEBHOOK_SECRET=
+# Launch price and struck-through anchor (see PAYMENT_TODO.md).
+PRO_PRICE_INR=89
+PRO_ANCHOR_PRICE_INR=299
+# Where Razorpay returns the buyer; the report id is appended automatically.
+PRO_RETURN_URL=https://abhishekpratapsingh2601-arch.github.io/java-job-fit/

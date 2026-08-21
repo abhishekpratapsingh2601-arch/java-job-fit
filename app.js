@@ -50,6 +50,24 @@ const premiumModal = document.querySelector("#premium-modal");
 const premiumClose = document.querySelector("#premium-close");
 const joinEarlyAccess = document.querySelector("#join-early-access");
 const notifyPro = document.querySelector("#notify-pro");
+const premiumPay = document.querySelector("#premium-pay");
+const premiumStatus = document.querySelector("#premium-status");
+const premiumUnavailable = document.querySelector("#premium-unavailable");
+const premiumEarlyAccess = document.querySelector("#premium-early-access");
+const premiumSummaryCard = document.querySelector("#premium-summary-card");
+const premiumSummaryNode = document.querySelector("#premium-summary");
+const premiumPlacementsCard = document.querySelector("#premium-placements-card");
+const premiumPlacementsNode = document.querySelector("#premium-placements");
+const premiumCoverCard = document.querySelector("#premium-cover-card");
+const premiumCoverNode = document.querySelector("#premium-cover");
+const premiumLinkedinCard = document.querySelector("#premium-linkedin-card");
+const premiumLinkedinHeadlineNode = document.querySelector("#premium-linkedin-headline");
+const premiumLinkedinAboutNode = document.querySelector("#premium-linkedin-about");
+const planPreviewNote = document.querySelector("#plan-preview-note");
+const premiumPriceNodes = [
+  document.querySelector("#premium-price"),
+  document.querySelector("#premium-pay-price"),
+];
 
 let latestReport = null;
 let latestReportSaved = false;
@@ -521,17 +539,29 @@ function normalizeReport(report) {
   const questions = report.interviewQuestions || report.questions || [];
   const plan = report.prepPlan || report.plan || [];
 
+  // The backend already truncates free reports; this second cap only exists for the browser
+  // fallback engine, which produces untruncated output. Applying it to a PAID backend response
+  // would hide the very content the user just bought, so cap only while unpaid.
+  const paid = report.freePreview === false;
+  const cap = (values, freeItems) => (paid ? values : values.slice(0, freeItems));
+
   return {
     id: report.publicId || report.reportId || report.id || null,
     saved: Boolean(report.publicId || report.reportId || report.id),
+    paid,
     score,
     scoreSummary: report.scoreSummary || buildScoreSummary(score, matched, Math.min(missing.length, 5)),
-    matched: matched.slice(0, 3),
-    missing: missing.slice(0, 5),
-    topFixes: (report.topFixes || []).slice(0, 3),
-    bullets: bullets.slice(0, 1),
-    questions: questions.slice(0, 3),
-    plan: plan.slice(0, 2),
+    matched: cap(matched, 3),
+    missing: cap(missing, 5),
+    topFixes: cap(report.topFixes || [], 3),
+    bullets: cap(bullets, 1),
+    questions: cap(questions, 3),
+    plan: cap(plan, 2),
+    resumeSummary: report.resumeSummary || "",
+    coverLetter: report.coverLetter || "",
+    keywordPlacements: report.keywordPlacements || [],
+    linkedinHeadline: report.linkedinHeadline || "",
+    linkedinAbout: report.linkedinAbout || "",
     // Only the backend engine produces a real 7-component breakdown. The browser fallback
     // engine computes a simpler preview score, so we pass null and hide the breakdown card
     // instead of rendering misleading zeros next to a non-zero headline score.
@@ -555,6 +585,32 @@ function renderList(node, items) {
 function renderLockedSections() {
   lockedGrid.innerHTML = "";
   lockedGrid.hidden = true;
+}
+
+/**
+ * Shows the Pro sections only when the backend says this report is paid. It withholds these
+ * fields entirely for a free report, so there is nothing here to reveal by editing the DOM.
+ */
+function renderPremiumSections(report) {
+  const show = (card, hasContent) => {
+    if (card) card.hidden = !(report.paid && hasContent);
+  };
+
+  if (premiumSummaryNode) premiumSummaryNode.textContent = report.resumeSummary;
+  show(premiumSummaryCard, Boolean(report.resumeSummary));
+
+  if (premiumPlacementsNode) renderList(premiumPlacementsNode, report.keywordPlacements);
+  show(premiumPlacementsCard, report.keywordPlacements.length > 0);
+
+  if (premiumCoverNode) premiumCoverNode.textContent = report.coverLetter;
+  show(premiumCoverCard, Boolean(report.coverLetter));
+
+  if (premiumLinkedinHeadlineNode) premiumLinkedinHeadlineNode.textContent = report.linkedinHeadline;
+  if (premiumLinkedinAboutNode) premiumLinkedinAboutNode.textContent = report.linkedinAbout;
+  show(premiumLinkedinCard, Boolean(report.linkedinHeadline || report.linkedinAbout));
+
+  // The "free preview" notes are wrong once the full plan is on screen.
+  if (planPreviewNote) planPreviewNote.hidden = report.paid;
 }
 
 function renderScoreBreakdown(breakdown) {
@@ -681,6 +737,7 @@ function renderResults(report) {
   renderList(planList, latestReport.plan);
   renderScoreBreakdown(latestReport.scoreBreakdown);
   renderLockedSections(latestReport.premiumLockedSections);
+  renderPremiumSections(latestReport);
 
   feedbackStatus.textContent = latestReportSaved
     ? ""
@@ -1028,9 +1085,129 @@ async function submitUsefulnessFeedback(answer) {
   }
 }
 
+// Payments are behind a server-side flag: until the backend says they are on, the modal shows
+// the early-access path instead of a checkout button. The browser never decides what is unlocked.
+let paymentConfig = { enabled: false, priceInr: 89 };
+
+async function loadPaymentConfig() {
+  try {
+    const response = await fetch(`${apiBase}/api/payments/config`);
+    if (!response.ok) return;
+    const config = await response.json();
+    paymentConfig = { enabled: config.enabled === true, priceInr: config.priceInr || 89 };
+    premiumPriceNodes.forEach((node) => {
+      if (node) node.textContent = String(paymentConfig.priceInr);
+    });
+  } catch (error) {
+    // Offline or backend asleep: leave the safe default (payments off).
+  }
+}
+
+function applyPaymentAvailability() {
+  const enabled = paymentConfig.enabled;
+  if (premiumPay) premiumPay.hidden = !enabled;
+  if (premiumUnavailable) premiumUnavailable.hidden = enabled;
+  if (premiumEarlyAccess) premiumEarlyAccess.hidden = enabled;
+}
+
 function openPremiumModal() {
   trackEvent("premium_cta_clicked", { publicId: latestReport?.id || null });
+  if (premiumStatus) premiumStatus.textContent = "";
+  applyPaymentAvailability();
   premiumModal.hidden = false;
+}
+
+async function startCheckout() {
+  const publicId = latestReport?.id;
+  if (!publicId) {
+    if (premiumStatus) premiumStatus.textContent = "Run a scan first, then unlock that report.";
+    return;
+  }
+  premiumPay.disabled = true;
+  if (premiumStatus) premiumStatus.textContent = "Opening secure checkout…";
+  trackEvent("checkout_started", { publicId });
+  try {
+    const response = await fetch(`${apiBase}/api/payments/link`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publicId }),
+    });
+    if (response.status === 409) {
+      // Already paid — just refresh into the full report.
+      await refreshReportAfterPayment(publicId);
+      return;
+    }
+    if (!response.ok) throw new Error(`checkout ${response.status}`);
+    const data = await response.json();
+    if (!data.paymentUrl) throw new Error("no payment url");
+    // Remember which report we are paying for: the return trip is a fresh page load.
+    try {
+      window.sessionStorage.setItem("javajobfit_pending_report", publicId);
+    } catch (storageError) {
+      // Private mode: the return URL also carries the id, so this is only a convenience.
+    }
+    window.location.href = data.paymentUrl;
+  } catch (error) {
+    premiumPay.disabled = false;
+    if (premiumStatus) {
+      premiumStatus.textContent =
+        "Could not open checkout. The free server may be waking up — please try again in a moment.";
+    }
+    trackEvent("checkout_failed", { publicId });
+  }
+}
+
+/**
+ * After returning from the payment page, re-fetch the report. The webhook is what actually
+ * unlocks it, and it can land a second or two after the redirect, so retry briefly.
+ */
+async function refreshReportAfterPayment(publicId) {
+  if (premiumStatus) premiumStatus.textContent = "Confirming your payment…";
+  for (let attempt = 1; attempt <= 6; attempt += 1) {
+    try {
+      const response = await fetch(`${apiBase}/api/reports/${encodeURIComponent(publicId)}`);
+      if (response.ok) {
+        const report = await response.json();
+        if (report.freePreview === false) {
+          renderResults(report);
+          closePremiumModal();
+          trackEvent("checkout_completed", { publicId });
+          try {
+            window.sessionStorage.removeItem("javajobfit_pending_report");
+          } catch (storageError) {
+            /* nothing to clean up */
+          }
+          return true;
+        }
+      }
+    } catch (error) {
+      /* retry below */
+    }
+    await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+  }
+  if (premiumStatus) {
+    // Deliberately does not assert that a payment happened — this path is also reached by a
+    // hand-crafted ?paid=1 on a report nobody bought.
+    premiumStatus.textContent =
+      "This report is not unlocked yet. If you have just paid, reload this page in a minute — your report link stays valid.";
+  }
+  return false;
+}
+
+function resumeAfterPaymentRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  let publicId = params.get("report");
+  if (!publicId) {
+    try {
+      publicId = window.sessionStorage.getItem("javajobfit_pending_report");
+    } catch (storageError) {
+      publicId = null;
+    }
+  }
+  if (!publicId || params.get("paid") !== "1") return;
+  premiumModal.hidden = false;
+  applyPaymentAvailability();
+  refreshReportAfterPayment(publicId);
 }
 
 function closePremiumModal() {
@@ -1233,6 +1410,9 @@ document.addEventListener("click", (event) => {
 
 premiumClose.addEventListener("click", closePremiumModal);
 notifyPro.addEventListener("click", closePremiumModal);
+if (premiumPay) {
+  premiumPay.addEventListener("click", startCheckout);
+}
 joinEarlyAccess.addEventListener("click", () => {
   closePremiumModal();
   leadEmail.focus();
@@ -1254,6 +1434,32 @@ copyPlanButton.addEventListener("click", () => {
   copyText(copyPlanButton, "7-day prep plan preview", latestReport?.plan || []);
 });
 
+const copySummaryButton = document.querySelector("#copy-summary");
+const copyCoverButton = document.querySelector("#copy-cover");
+const copyLinkedinButton = document.querySelector("#copy-linkedin");
+
+if (copySummaryButton) {
+  copySummaryButton.addEventListener("click", () => {
+    copyText(copySummaryButton, "Resume summary", [latestReport?.resumeSummary || ""]);
+  });
+}
+
+if (copyCoverButton) {
+  copyCoverButton.addEventListener("click", () => {
+    copyText(copyCoverButton, "Cover letter draft", [latestReport?.coverLetter || ""]);
+  });
+}
+
+if (copyLinkedinButton) {
+  copyLinkedinButton.addEventListener("click", () => {
+    copyText(copyLinkedinButton, "LinkedIn rewrite", [
+      latestReport?.linkedinHeadline || "",
+      "",
+      latestReport?.linkedinAbout || "",
+    ]);
+  });
+}
+
 trackEvent("page_view", { experienceLevel: experienceInput.value });
 
 const pricingSection = document.querySelector(".pricing-section");
@@ -1269,3 +1475,4 @@ if (pricingSection && "IntersectionObserver" in window) {
 
 // Warm the free-tier backend on initial load so the first scan/upload avoids a cold start.
 warmBackend();
+loadPaymentConfig().then(resumeAfterPaymentRedirect);
