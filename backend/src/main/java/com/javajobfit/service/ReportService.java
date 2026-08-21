@@ -73,9 +73,16 @@ public class ReportService {
                 .orElseThrow(() -> new ReportNotFoundException(reference));
     }
 
+    /**
+     * The paywall. Free reports are truncated to a teaser; paid reports return everything that
+     * was generated. This split is server-side on purpose — the browser is never sent premium
+     * content it is not entitled to, so the paywall cannot be lifted from the client.
+     */
     private ReportResponse toResponse(Report report) {
+        boolean paid = report.isPaid();
         List<String> matchedSkills = split(report.getMatchedSkills());
         List<String> missingKeywords = split(report.getMissingKeywords());
+        List<String> topFixes = split(report.getTopFixes());
         List<String> bulletSuggestions = split(report.getBulletSuggestions());
         List<String> interviewQuestions = split(report.getInterviewQuestions());
         List<String> prepPlan = split(report.getPrepPlan());
@@ -88,21 +95,27 @@ public class ReportService {
         response.setScore(report.getScore());
         response.setAtsScore(report.getScore());
         response.setScoreSummary(report.getScoreSummary());
-        response.setMatchedSkills(limit(matchedSkills, 3));
-        response.setMatchedStrengths(limit(matchedSkills, 3));
-        response.setMissingKeywords(limit(missingKeywords, 5));
-        response.setTopFixes(limit(split(report.getTopFixes()), 3));
-        response.setBulletSuggestions(limit(bulletSuggestions, 1));
-        response.setBulletUpgrades(limit(bulletSuggestions, 1));
-        response.setInterviewQuestions(limit(interviewQuestions, 3));
-        response.setPrepPlan(limit(prepPlan, 2));
+        response.setMatchedSkills(teaser(paid, matchedSkills, 3));
+        response.setMatchedStrengths(teaser(paid, matchedSkills, 3));
+        response.setMissingKeywords(teaser(paid, missingKeywords, 5));
+        response.setTopFixes(teaser(paid, topFixes, 3));
+        response.setBulletSuggestions(teaser(paid, bulletSuggestions, 1));
+        response.setBulletUpgrades(teaser(paid, bulletSuggestions, 1));
+        response.setInterviewQuestions(teaser(paid, interviewQuestions, 3));
+        response.setPrepPlan(teaser(paid, prepPlan, 2));
         applyBreakdown(response, decodeBreakdown(report.getScoreBreakdown()));
-        response.setFreePreview(true);
-        response.setPremiumAvailable(true);
-        response.setPremiumLockedSections(PREMIUM_LOCKED_SECTIONS);
+        response.setFreePreview(!paid);
+        // Nothing left to sell on a report that is already unlocked, so the upgrade CTA and
+        // the locked-section list disappear for paid reports.
+        response.setPremiumAvailable(!paid);
+        response.setPremiumLockedSections(paid ? Collections.emptyList() : PREMIUM_LOCKED_SECTIONS);
         response.setExperienceLevel(report.getExperienceLevel());
         response.setCreatedAt(report.getCreatedAt());
         return response;
+    }
+
+    private List<String> teaser(boolean paid, List<String> values, int freeItems) {
+        return paid ? values : limit(values, freeItems);
     }
 
     private Optional<Report> findReportByPublicId(String reference) {

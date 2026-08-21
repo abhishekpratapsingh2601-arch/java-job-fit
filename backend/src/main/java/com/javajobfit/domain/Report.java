@@ -52,6 +52,12 @@ public class Report {
     private String scoreBreakdown;
 
     @Column(nullable = false)
+    private boolean paid;
+
+    @Column(name = "paid_at")
+    private Instant paidAt;
+
+    @Column(nullable = false)
     private Instant createdAt;
 
     @PrePersist
@@ -152,6 +158,24 @@ public class Report {
 
     public void setScoreBreakdown(String scoreBreakdown) {
         this.scoreBreakdown = scoreBreakdown;
+    }
+
+    public boolean isPaid() {
+        return paid;
+    }
+
+    public Instant getPaidAt() {
+        return paidAt;
+    }
+
+    /**
+     * Unlocks the full report. Deliberately the only way to set {@code paid}, so a report can
+     * never be marked paid without recording when — and so every call site is easy to audit.
+     * Must only be called after a payment provider webhook has been signature-verified.
+     */
+    public void markPaid() {
+        this.paid = true;
+        this.paidAt = Instant.now();
     }
 
     public Instant getCreatedAt() {

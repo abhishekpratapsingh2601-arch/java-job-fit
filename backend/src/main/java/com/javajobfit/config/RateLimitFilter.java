@@ -86,14 +86,51 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
     }
 
+    /**
+     * Identifies the caller for rate-limiting. Must not be attacker-controlled: reading the
+     * leftmost {@code X-Forwarded-For} value let any client mint unlimited identities by
+     * sending its own header, which bypassed this limiter and would bypass the free-scan caps
+     * built on top of it.
+     *
+     * <p>Order of trust:
+     * <ol>
+     *   <li>{@code CF-Connecting-IP} / {@code True-Client-IP} — Cloudflare fronts
+     *       {@code *.onrender.com} and overwrites these with the real peer, so a client cannot
+     *       forge them.</li>
+     *   <li>The <em>rightmost</em> {@code X-Forwarded-For} entry — Cloudflare appends the true
+     *       peer rather than replacing the header, so anything a client injects ends up to the
+     *       left of the value our own infrastructure added.</li>
+     *   <li>The socket address.</li>
+     * </ol>
+     */
     private String clientKey(HttpServletRequest request) {
+        String cloudflareIp = firstNonBlank(
+                request.getHeader("CF-Connecting-IP"),
+                request.getHeader("True-Client-IP"));
+        if (cloudflareIp != null) {
+            return cloudflareIp;
+        }
+
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
-            int comma = forwarded.indexOf(',');
-            return (comma >= 0 ? forwarded.substring(0, comma) : forwarded).trim();
+            int lastComma = forwarded.lastIndexOf(',');
+            String nearestHop = lastComma >= 0 ? forwarded.substring(lastComma + 1) : forwarded;
+            if (!nearestHop.isBlank()) {
+                return nearestHop.trim();
+            }
         }
+
         String remote = request.getRemoteAddr();
         return remote == null || remote.isBlank() ? "unknown" : remote;
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        return null;
     }
 
     private static final class Window {
