@@ -130,6 +130,20 @@ Writes are unambiguous user database activity.
 run any query (e.g. `select count(*) from events;`) — dashboard activity resets the idle
 clock immediately and buys 7 days while you investigate.
 
+**Correction (9 Sep 2026): this job is NOT independent of keep-warm, and both were found
+dead.** keep-warm auto-disabled on 22 Aug (deploy-restart 503s), after which Render slept; every
+DB ping then hit a cold server, and a ~60s cold start exceeds cron-job.org's 30s cap, so this job
+failed 4x/day until it auto-disabled too on 28 Aug. Supabase survived the following 12 days only
+because a manual health check on 30 Aug and another on 9 Sep happened to write rows — not
+because of any job. Check the Supabase inbox for a pause warning whenever both jobs show
+Inactive.
+
+**Fix:** `.github/workflows/keepalive.yml` is now scheduled twice daily (03:00 and 15:00 UTC).
+It has a 90s timeout and 5 retries, so it wakes a sleeping Render and still completes, and
+GitHub does not auto-disable a workflow for failing. It is the real Supabase keeper; this
+cron-job.org job is now a bonus. GitHub does pause schedules in repos with no commits for 60
+days — any push re-arms it.
+
 Why 4/day is safe where 10-minute DB pinging wasn't: a multi-hour outage produces only a
 couple of failures — far below cron-job.org's ~26-consecutive-failures auto-disable
 threshold — and each ping hits an already-warm instance (the main job keeps Render awake),
@@ -138,10 +152,11 @@ idle clock.
 
 ## GitHub Actions workflow
 
-`.github/workflows/keepalive.yml` is now **manual-only** (`workflow_dispatch`). Its old
-10-minute schedule was removed: GitHub cron is frequently delayed past the 15-minute
-sleep window (so it missed cold starts) and emailed a failure on every miss. Trigger it
-manually from the Actions tab only for an ad-hoc health check.
+`.github/workflows/keepalive.yml` runs **twice daily** (03:00 and 15:00 UTC) as the Supabase
+keeper — see the correction above for why cron-job.org alone cannot do that job. It is still
+NOT a keep-warm: GitHub cron is delayed by minutes to an hour, useless against Render's
+15-minute sleep, so the old 10-minute schedule stays removed. It can also be run manually from
+the Actions tab for an ad-hoc health check.
 
 ## When to upgrade to paid
 

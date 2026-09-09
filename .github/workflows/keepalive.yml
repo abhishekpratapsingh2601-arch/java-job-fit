@@ -1,15 +1,27 @@
 name: Keep backend and database warm
 
-# Manual, on-demand health check only.
+# Supabase keeper: twice-daily DB ping that survives a Render cold start.
 #
-# Scheduled keep-warm pinging is handled by cron-job.org (see KEEP_WARM_SETUP.md),
-# which is more reliable than GitHub's delayed cron and lets us restrict the window to
-# stay inside Render's free instance-hour budget. The old "*/10 * * * *" schedule was
-# removed because GitHub cron delays caused cold-start timeouts and failure-email noise.
-# Run this manually from the Actions tab when you want an ad-hoc health check.
+# Why this exists again as a schedule: the cron-job.org "supabase keep-awake" job cannot do
+# this job on its own. Its request timeout is capped at 30s, a Render cold start takes ~60s,
+# so whenever the separate keep-warm job dies (it auto-disables after ~26 consecutive
+# failures — happened 5 Aug and again 22 Aug) every DB ping then hits a sleeping server, times
+# out, and the DB job auto-disables too within a week (28 Aug). Supabase then pauses after 7
+# idle days. This workflow has a 90s timeout and retries, so it wakes the server and still gets
+# its answer. Twice a day is plenty for Supabase's 7-day idle rule, and GitHub cron's usual
+# delay of minutes-to-an-hour is irrelevant at that cadence.
+#
+# The old "*/10 * * * *" keep-WARM schedule stays removed: GitHub cron is too delayed to
+# stop Render's 15-minute sleep, and that is still cron-job.org's job (see KEEP_WARM_SETUP.md).
+#
+# Caveat: GitHub disables scheduled workflows in repos with no commits for 60 days. Any push
+# re-arms it. If the project ever goes quiet that long, this needs a manual run or a commit.
 
 on:
   workflow_dispatch: {}
+  schedule:
+    # 03:00 and 15:00 UTC = 08:30 and 20:30 IST.
+    - cron: "0 3,15 * * *"
 
 concurrency:
   group: keepalive
