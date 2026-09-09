@@ -112,12 +112,10 @@ To prevent the 7-day pause during zero-traffic stretches, add a SECOND cron-job.
   the warm window (IST 02:00, 08:00, 14:00, 20:00)
 - **Failure notifications:** OFF. *"Disabled because of too many failures"*: ON.
 
-**As actually configured (7 Aug 2026)** this job runs at **01:30, 07:30, 13:30, 19:30 IST**
-(:30 past hours 1/7/13/19) rather than the recommended expression. That still satisfies the
-anti-pause requirement — 4 real DB queries a day, evenly spaced — but the **07:30 run falls
-inside the 04:00–07:59 sleep window**, so once a day it wakes the instance early and logs a
-timeout failure. Harmless (the request still reaches Render and the DB query still runs;
-cron just stops waiting for the reply), but switching to `0 2,8,14,20 * * *` removes it.
+**As configured since 9 Sep 2026** this job runs on the recommended `0 2,8,14,20 * * *`
+(02:00, 08:00, 14:00, 20:00 IST), all inside the warm window. From 7 Aug to 9 Sep it ran at
+:30 past 1/7/13/19, whose 07:30 run fell inside the 04:00–07:59 sleep window and logged one
+harmless timeout a day.
 
 **Update (20 Aug 2026): tiny reads were not enough.** Supabase sent a "project is going to
 be paused" warning even while this job was successfully running `select 1` through the
