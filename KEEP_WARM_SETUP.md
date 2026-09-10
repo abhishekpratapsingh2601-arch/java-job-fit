@@ -69,15 +69,19 @@ instance starts sleeping again. Liveness pinging avoids that failure mode.
 
 `/api/health/db` is for manual monitoring/alerting, not for keep-warm.
 
-### Expect one "failed" ping per day — that one is harmless
+### Expect failed pings right after the sleep window — and do not rely on them to wake Render
 
 cron-job.org's free plan caps a request at **30 seconds**, and a cold start takes **~60s**.
-So the first ping after each sleep window is always recorded as *failed*. It still reaches
-Render and still triggers the wake, so the ping 10 minutes later succeeds. One red row per
-day at the start of the warm window is expected; don't chase it.
+So the first ping after each sleep window is always recorded as *failed*. Earlier versions of
+this doc claimed that ping "still triggers the wake" — **that turned out to be unreliable**
+(10 Sep 2026: five hours of post-sleep pings never woke the server). Render tends to answer
+the abandoned 30s request with a fast 503 rather than finish booting, and each following ping
+repeats it. The hourly GitHub Actions run (90s timeout) is what actually wakes Render; expect
+red cron rows between ~08:00 IST and that first GitHub run, then green.
 
-What is **not** normal is a long unbroken run of failures — that's what trips the
-~26-consecutive auto-disable.
+What is **not** normal is red rows continuing all day — that means the GitHub waker is not
+running (check the Actions tab), and a long unbroken run of failures is also what trips
+cron-job.org's ~26-consecutive auto-disable.
 
 ### This job has been auto-disabled twice — suspect it whenever the site feels slow
 
@@ -136,11 +140,19 @@ because a manual health check on 30 Aug and another on 9 Sep happened to write r
 because of any job. Check the Supabase inbox for a pause warning whenever both jobs show
 Inactive.
 
-**Fix:** `.github/workflows/keepalive.yml` is now scheduled twice daily (03:00 and 15:00 UTC).
-It has a 90s timeout and 5 retries, so it wakes a sleeping Render and still completes, and
-GitHub does not auto-disable a workflow for failing. It is the real Supabase keeper; this
-cron-job.org job is now a bonus. GitHub does pause schedules in repos with no commits for 60
-days — any push re-arms it.
+**Fix:** `.github/workflows/keepalive.yml` is scheduled **hourly through the warm window**
+(`5 2-21 * * *` UTC ≈ 07:35–03:05 IST). It has a 90s timeout and 5 retries, so it wakes a
+sleeping Render and still completes, and GitHub does not auto-disable a workflow for failing.
+It is the real Supabase keeper *and* the "patient waker" for Render; the cron-job.org jobs
+keep an awake server awake but cannot wake a sleeping one (see below). GitHub does pause
+schedules in repos with no commits for 60 days — any push re-arms it.
+
+**Found 10 Sep 2026: cron-job.org cannot wake Render after the nightly sleep.** With keep-warm
+enabled and pinging, the server was still asleep at 13:46 IST — five hours of 30-second pings
+had failed to wake it. Render answers an abandoned 30s request with a fast 503 instead of
+finishing the ~60s boot, so every ping fails the same way until a client waits the full minute.
+Once woken (by a manual curl), the same cron kept it warm for hours. Conclusion: the 10-minute
+cron is a *keeper*, not a *waker*; the hourly GitHub run is the waker.
 
 Why 4/day is safe where 10-minute DB pinging wasn't: a multi-hour outage produces only a
 couple of failures — far below cron-job.org's ~26-consecutive-failures auto-disable
