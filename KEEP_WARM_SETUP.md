@@ -16,12 +16,25 @@ Two layers handle this:
 2. **Keep-warm pinging (this doc).** Ping the health endpoint on a schedule so the
    instance rarely sleeps during active hours.
 
-## Decision: warm ~20h/day, not 24/7
+## Decision (revised 11 Sep 2026): run keep-warm 24/7 — never let Render sleep
 
-Render free gives ~750 instance-hours/month. Running 24/7 uses ~720–744 hrs — it *fits*
-but with almost no margin, and only if this is the only free service. Exceeding the cap
-suspends the service for the rest of the month, so keep a buffer. We ping ~20h/day and let
-the deadest window sleep; the app's graceful handling covers any off-window cold start.
+Original plan was ~20h/day with a 04:00–08:00 IST sleep to keep a buffer under Render's 750
+free instance-hours. That sleep turned out to be the root of every keep-alive incident since
+August: once Render hibernates, **nothing free wakes it dependably.** cron-job.org's 30s cap
+gets a fast 503 instead of a wake; GitHub Actions has a 90s timeout but drops scheduled ticks
+for hours at a time (four consecutive misses on the morning of 11 Sep, server down 7+ hours,
+then a 9-minute wake). The only robust free option is to remove the sleep entirely:
+
+- keep-warm expression: `*/10 * * * *` (every 10 minutes, all day). This also makes the
+  UTC-vs-IST timezone question moot.
+- Hours: 30-day month = 720h, 31-day month = 744h, cap 750h. Fits, with a thin margin in
+  31-day months. Check Render's usage meter mid-month; if it ever trends over, re-add a short
+  gap for the last few days rather than risk suspension (which lasts until month end).
+- Only valid while this is the ONLY free web service on the Render account.
+
+The 4–8 AM sleep was never worth it: it saved ~120h/month of a budget we were not close to,
+at the cost of a daily outage that free tooling could not reliably end. The permanent fix
+remains Render's paid tier (no sleep at all); first revenue pays for it.
 
 ### These schedules run in IST, not UTC
 

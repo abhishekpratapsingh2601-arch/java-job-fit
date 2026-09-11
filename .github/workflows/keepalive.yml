@@ -6,9 +6,13 @@ name: Keep backend and database warm
 # could not wake Render for over five hours. A cold start takes ~60s; Render answers the
 # abandoned 30s request with a fast 503 rather than finishing the wake, the next ping repeats
 # it, and the server stays asleep until a client waits the full minute. This job waits 90s
-# with retries, so running it hourly through the warm window caps any such sleep at ~1 hour
-# (plus GitHub cron drift) instead of "until a human notices". cron-job.org still does the
-# 10-minute pinging that keeps an awake server awake; this is the thing that wakes it.
+# with retries, so running it "hourly" through the warm window was meant to cap any such sleep
+# at ~1 hour. In practice (10-11 Sep 2026) GitHub ran it every ~3 hours overnight and then
+# dropped four consecutive morning ticks (07:35-10:35 IST) — the server stayed down 7+ hours
+# and took a 9-minute wake when finally probed. So this is a backstop, not a guarantee.
+# The reliable fix is to never let Render sleep: run cron-job.org keep-warm 24/7
+# (see KEEP_WARM_SETUP.md). cron-job.org keeps an awake server awake; nothing free wakes a
+# sleeping one dependably.
 #
 # Why this exists again as a schedule: the cron-job.org "supabase keep-awake" job cannot do
 # this job on its own. Its request timeout is capped at 30s, a Render cold start takes ~60s,
