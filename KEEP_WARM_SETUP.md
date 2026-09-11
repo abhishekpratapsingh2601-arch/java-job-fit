@@ -36,23 +36,22 @@ The 4–8 AM sleep was never worth it: it saved ~120h/month of a budget we were 
 at the cost of a daily outage that free tooling could not reliably end. The permanent fix
 remains Render's paid tier (no sleep at all); first revenue pays for it.
 
-### These schedules run in IST, not UTC
+### These schedules run in UTC (corrected 11 Sep 2026 — the doc said IST for a month)
 
-cron-job.org labels its Next-executions list "(UTC)", but on this account both jobs
-demonstrably fire on **IST (Asia/Kolkata)**. Verified 7 Aug 2026 by comparing each job's
-Next-executions list against the real clock: with the wall clock at 18:45 UTC / 00:15 IST,
-`0 2,8,14,20` showed its next run as 02:00 the following day — the next matching hour in
-IST, not the 20:00 UTC a UTC schedule would have given. Both jobs agreed.
+On 7 Aug this doc concluded the jobs evaluate in IST. **That was wrong.** Conclusive evidence:
+the supabase job on `0 2,8,14,20` shows last/next executions of 1:30 PM and 7:30 PM IST — which
+is 08:00 and 14:00 UTC. Warmth samples agree: the server held warm at 14:03–14:33 IST
+(08:33–09:03 UTC, inside the pinging hours) and was cold at 11:43 IST (06:13 UTC, inside the
+`*/10 0-3,8-23` gap of 04:00–07:59 UTC).
 
-Check a job's ADVANCED tab before assuming otherwise, and re-verify if the account timezone
-ever changes.
+So the intended "04:00–08:00 IST" sleep window was actually **09:30–13:30 IST — peak Indian
+job-hunting hours — every day from 7 Aug to 11 Sep.** That, not any single crash, is why the
+server kept being found asleep at midday.
 
-Audience is India-first (r/developersIndia, ₹ pricing), so the sleep window belongs in the
-Indian small hours: **04:00–07:59 IST**, which is exactly where `*/10 0-3,8-23` puts it.
-
-Do **not** "correct" this to a UTC-style window without re-checking the timezone. Read as
-IST, a `*/10 1-20 * * *` range would move the daily outage to 21:00–00:59 IST — prime
-evening job-hunting hours.
+With keep-warm on `*/10 * * * *` (24/7) the timezone no longer matters. If a window is ever
+reintroduced, set the job's timezone explicitly in the ADVANCED tab and verify against a
+known-time execution in History rather than the edit page's "Next executions" list, which
+was what misled the 7 Aug reading.
 
 ## Setup: cron-job.org (free, reliable, supports an hour window)
 
@@ -60,16 +59,16 @@ evening job-hunting hours.
 2. Create a cronjob:
    - **Title:** JavaJobFit keep-warm
    - **URL:** `https://java-job-fit.onrender.com/api/health`
-   - **Schedule:** every **10 minutes**, restricted to IST hours **00–03 and 08–23**
-     (i.e., paused 04:00–07:59 IST).
-   - Custom cron expression if needed: `*/10 0-3,8-23 * * *`
-   - **Timezone:** evaluated in IST on this account — see the section above.
+   - **Schedule:** every **10 minutes, 24/7** — custom expression `*/10 * * * *`
+     (see the revised decision above; the former windowed expression `*/10 0-3,8-23` ran in
+     UTC and slept the server at Indian midday).
+   - **Timezone:** UTC on this account — see the section above.
    - **Notifications:** turn ON *"the cronjob will be disabled because of too many
      failures"*. Leave *"execution of the cronjob fails"* OFF — it would email daily
      (see the timeout note below).
 3. Save. Expected response: HTTP 200 with `"status":"ok"`.
 
-Result: ~20h/day × ~30 days ≈ ~600 instance-hours/month — safely under the 750 cap.
+Result: 720h (30-day month) or 744h (31-day month) — under the 750 cap with a thin margin.
 
 ### Important: ping `/api/health`, NOT `/api/health/db`
 
