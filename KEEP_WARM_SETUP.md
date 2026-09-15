@@ -172,6 +172,29 @@ threshold — and each ping hits an already-warm instance (the main job keeps Re
 so there are no cold-start timeouts. Each ping is a real DB query, which resets Supabase's
 idle clock.
 
+## Fourth auto-disable (15 Sep 2026) — and why GitHub Actions is not a waker
+
+Sequence: GitHub run woke Render at 13:07 IST; nothing pinged for 15 min so it slept at
+~13:22; cron-job.org pings resumed 13:30 (still on the windowed UTC schedule) and hit a
+sleeping server; every ping got a fast 503 (~700 ms); GitHub then **skipped five consecutive
+hourly runs** (13:35–17:35 IST); 26 failures later the job auto-disabled at 17:40. The
+"disabled" email arrived within one minute — that alert is reliable.
+
+Lessons, in order of importance:
+
+1. **GitHub's schedule is dropped under load for hours at a time.** Fine for Supabase
+   (7-day tolerance). Useless as a Render waker (15-minute tolerance). Do not rely on it
+   for that; the 10 Sep note above calling it "the waker" was too optimistic.
+2. **cron-job.org can hold an awake server but never wake a sleeping one.** Any sleep —
+   the daily window, a blip, a deploy gap — becomes a 4-hour failure run and an auto-disable.
+3. **Recovery procedure (manual):** open the site or curl `/api/health` and wait the full
+   ~60 s for it to boot, THEN re-enable the job so its first ping lands on a warm server.
+   Re-enabling first just restarts the 26-failure countdown.
+4. **The only fix that removes the failure mode is a server that does not sleep** — Render
+   Starter (~$7/mo). Everything on the free tier is mitigation: the 24/7 `*/10 * * * *`
+   schedule removes the *daily* trigger, and this email alert plus the recovery procedure
+   handles the rest.
+
 ## GitHub Actions workflow
 
 `.github/workflows/keepalive.yml` runs **twice daily** (03:00 and 15:00 UTC) as the Supabase
