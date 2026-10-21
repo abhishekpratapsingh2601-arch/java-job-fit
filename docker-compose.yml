@@ -28,7 +28,7 @@ services:
       HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
       SPRING_PROFILES_ACTIVE: prod
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: "false"
-      ALLOWED_ORIGINS: http://localhost:4173,http://127.0.0.1:4173,https://abhishekpratapsingh2601-arch.github.io
+      ALLOWED_ORIGINS: http://localhost:4173,http://127.0.0.1:4173,https://javajobfit.com,https://www.javajobfit.com,https://abhishekpratapsingh2601-arch.github.io
     ports:
       - "8080:8080"
 

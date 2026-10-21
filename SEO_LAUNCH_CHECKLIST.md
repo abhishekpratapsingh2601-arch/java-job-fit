@@ -4,22 +4,22 @@ JavaJobFit is an early beta product. Keep SEO useful, honest, and focused on Jav
 
 ## A. Google Search Console
 
-1. Add a URL-prefix property for `https://abhishekpratapsingh2601-arch.github.io/java-job-fit/`.
+1. Add a URL-prefix property for `https://javajobfit.com/`.
 2. Verify ownership using the method Google provides for GitHub Pages.
-3. Submit `https://abhishekpratapsingh2601-arch.github.io/java-job-fit/sitemap.xml`.
+3. Submit `https://javajobfit.com/sitemap.xml`.
 4. Use URL Inspection for the homepage and the highest-intent pages:
-   - `https://abhishekpratapsingh2601-arch.github.io/java-job-fit/java-developer-resume-checker.html`
-   - `https://abhishekpratapsingh2601-arch.github.io/java-job-fit/spring-boot-resume-keywords.html`
-   - `https://abhishekpratapsingh2601-arch.github.io/java-job-fit/java-fresher-resume-checker.html`
-   - `https://abhishekpratapsingh2601-arch.github.io/java-job-fit/backend-developer-resume-optimizer.html`
-   - `https://abhishekpratapsingh2601-arch.github.io/java-job-fit/java-interview-questions-from-job-description.html`
+   - `https://javajobfit.com/java-developer-resume-checker.html`
+   - `https://javajobfit.com/spring-boot-resume-keywords.html`
+   - `https://javajobfit.com/java-fresher-resume-checker.html`
+   - `https://javajobfit.com/backend-developer-resume-optimizer.html`
+   - `https://javajobfit.com/java-interview-questions-from-job-description.html`
 5. Request indexing after pages are live and GitHub Pages cache has refreshed.
 
 ## B. Bing Webmaster Tools
 
 1. Add the GitHub Pages site.
 2. Import from Google Search Console if available.
-3. Submit `https://abhishekpratapsingh2601-arch.github.io/java-job-fit/sitemap.xml`.
+3. Submit `https://javajobfit.com/sitemap.xml`.
 4. Check crawl errors after Bing processes the sitemap.
 
 ## C. After Custom Domain Later

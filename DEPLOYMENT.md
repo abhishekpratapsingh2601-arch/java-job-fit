@@ -80,7 +80,7 @@ PAYMENT_PROVIDER_ENABLED=false
 SPRING_DATASOURCE_URL=jdbc:postgresql://db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require
 SPRING_DATASOURCE_USERNAME=your_supabase_db_username
 SPRING_DATASOURCE_PASSWORD=your_supabase_db_password
-ALLOWED_ORIGINS=https://abhishekpratapsingh2601-arch.github.io
+ALLOWED_ORIGINS=https://javajobfit.com,https://www.javajobfit.com,https://abhishekpratapsingh2601-arch.github.io
 ```
 
 Do not commit real database passwords, Supabase credentials, Stripe keys, Razorpay keys, or any other secrets.

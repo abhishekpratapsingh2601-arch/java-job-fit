@@ -9,7 +9,7 @@ server:
 app:
   version: "${APP_VERSION:local}"
   cors:
-    allowed-origins: "${ALLOWED_ORIGINS:http://localhost:4173,http://127.0.0.1:4173,https://abhishekpratapsingh2601-arch.github.io}"
+    allowed-origins: "${ALLOWED_ORIGINS:http://localhost:4173,http://127.0.0.1:4173,https://javajobfit.com,https://www.javajobfit.com,https://abhishekpratapsingh2601-arch.github.io}"
   rate-limit:
     api-post-per-minute: "${RATE_LIMIT_API_POST_PER_MINUTE:30}"
     extract-per-minute: "${RATE_LIMIT_EXTRACT_PER_MINUTE:10}"
@@ -26,7 +26,7 @@ app:
     price-inr: "${PRO_PRICE_INR:89}"
     anchor-price-inr: "${PRO_ANCHOR_PRICE_INR:299}"
     # Where Razorpay sends the buyer back after paying. The report public id is appended.
-    return-url: "${PRO_RETURN_URL:https://abhishekpratapsingh2601-arch.github.io/java-job-fit/}"
+    return-url: "${PRO_RETURN_URL:https://javajobfit.com/}"
 
 spring:
   main:
