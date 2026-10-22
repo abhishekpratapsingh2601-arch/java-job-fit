@@ -759,9 +759,10 @@ function rememberReportInUrl(report) {
   if (!window.history || typeof window.history.replaceState !== "function") return;
   try {
     const url = new URL(window.location.href);
-    if (url.searchParams.get("report") === report.id) return;
+    // "paid=1" is only meaningful on the return trip from checkout; drop it once rendered, or
+    // every reload would reopen the payment popup and poll again.
+    if (url.searchParams.get("report") === report.id && !url.searchParams.has("paid")) return;
     url.searchParams.set("report", report.id);
-    // "paid=1" is only meaningful on the return trip from checkout; drop it once rendered.
     url.searchParams.delete("paid");
     window.history.replaceState({}, "", url.toString());
   } catch (error) {
@@ -779,6 +780,9 @@ function scrollToResults() {
   });
 }
 
+// Matches the backend's @Size limit on both fields.
+const MAX_INPUT_CHARS = 12000;
+
 function validateInputs() {
   const resume = resumeInput.value.trim();
   const job = jobInput.value.trim();
@@ -794,6 +798,9 @@ function validateInputs() {
   } else if (resume.length < 40) {
     resumeError.textContent = "Please paste a longer resume for a useful scan.";
     valid = false;
+  } else if (resume.length > MAX_INPUT_CHARS) {
+    resumeError.textContent = `Your resume is ${resume.length.toLocaleString("en-IN")} characters; the limit is 12,000. Trim older roles or long lists and try again.`;
+    valid = false;
   }
 
   if (!job) {
@@ -801,6 +808,9 @@ function validateInputs() {
     valid = false;
   } else if (job.length < 40) {
     jobError.textContent = "Please paste a longer job description for a useful scan.";
+    valid = false;
+  } else if (job.length > MAX_INPUT_CHARS) {
+    jobError.textContent = `The job description is ${job.length.toLocaleString("en-IN")} characters; the limit is 12,000. Paste only the role and requirements sections.`;
     valid = false;
   }
 
@@ -830,6 +840,13 @@ async function createBackendReport(resumeText, jobDescription, experienceLevel) 
     let message = "Something went wrong while generating your report. Please try again.";
     if (response.status === 400) {
       message = "Please paste both your resume and the target job description.";
+      try {
+        const body = await response.json();
+        const fieldMessage = body && body.fields && Object.values(body.fields)[0];
+        if (fieldMessage) message = fieldMessage;
+      } catch (parseError) {
+        /* keep the generic message */
+      }
     } else if (response.status >= 500) {
       message = "JavaJobFit is temporarily unavailable. Please try again in a minute.";
     }
@@ -841,7 +858,7 @@ async function createBackendReport(resumeText, jobDescription, experienceLevel) 
   return normalizeReport(await response.json());
 }
 
-async function buildReport() {
+async function buildReport(generation) {
   const resumeText = resumeInput.value;
   const jobText = jobInput.value;
   const experienceLevel = experienceInput.value;
@@ -857,7 +874,7 @@ async function buildReport() {
       report.id = null;
       report.notice =
         "The backend is waking up, so this free preview was generated in your browser. We will keep retrying in the background and update your score automatically once the full engine responds.";
-      scheduleBackendUpgrade(scanGeneration, resumeText, jobText, experienceLevel);
+      scheduleBackendUpgrade(generation, resumeText, jobText, experienceLevel);
       return report;
     }
     throw error;
@@ -939,7 +956,9 @@ function formatItems(title, items) {
 
 async function copyText(button, title, items) {
   if (!latestReport || !items.length) return;
-  const original = button.textContent;
+  // Remember the label once: a second click within 1.2s would otherwise save "Copied" as it.
+  if (!button.dataset.label) button.dataset.label = button.textContent;
+  const original = button.dataset.label;
   try {
     const text = formatItems(title, items);
     if (navigator.clipboard && window.isSecureContext) {
@@ -1142,7 +1161,23 @@ function openPremiumModal() {
   trackEvent("premium_cta_clicked", { publicId: latestReport?.id || null });
   if (premiumStatus) premiumStatus.textContent = "";
   applyPaymentAvailability();
+  showPremiumModal();
+}
+
+let premiumModalOpener = null;
+
+function premiumModalFocusables() {
+  return [...premiumModal.querySelectorAll("button, a[href]")].filter(
+    (node) => !node.disabled && node.offsetParent !== null,
+  );
+}
+
+/** Opens the dialog and moves focus into it, remembering where to return focus on close. */
+function showPremiumModal() {
+  premiumModalOpener = document.activeElement;
   premiumModal.hidden = false;
+  const target = premiumPay && !premiumPay.hidden ? premiumPay : premiumClose;
+  target.focus();
 }
 
 async function startCheckout() {
@@ -1162,12 +1197,14 @@ async function startCheckout() {
     });
     if (response.status === 409) {
       // Already paid — just refresh into the full report.
-      await refreshReportAfterPayment(publicId);
+      const unlocked = await refreshReportAfterPayment(publicId);
+      if (!unlocked) premiumPay.disabled = false;
       return;
     }
     if (!response.ok) throw new Error(`checkout ${response.status}`);
     const data = await response.json();
-    if (!data.paymentUrl) throw new Error("no payment url");
+    // Only ever navigate to an https checkout page.
+    if (!data.paymentUrl || !/^https:\/\//i.test(data.paymentUrl)) throw new Error("no payment url");
     // Remember which report we are paying for: the return trip is a fresh page load.
     try {
       window.sessionStorage.setItem("javajobfit_pending_report", publicId);
@@ -1241,16 +1278,22 @@ async function openReportFromUrl() {
   if (!publicId) return;
 
   if (returningFromCheckout) {
-    premiumModal.hidden = false;
-    applyPaymentAvailability();
+    // Someone who just paid must never read "payments are not live" because the config call
+    // to a cold backend has not answered yet: show only the confirmation status.
+    showPremiumModal();
+    if (premiumPay) premiumPay.hidden = true;
+    if (premiumUnavailable) premiumUnavailable.hidden = true;
+    if (premiumEarlyAccess) premiumEarlyAccess.hidden = true;
     await refreshReportAfterPayment(publicId);
     return;
   }
 
-  // Plain revisit: show the report as it stands (free or unlocked).
+  // Plain revisit: show the report as it stands (free or unlocked), unless the user has
+  // started a scan of their own while a cold backend was answering.
+  const generation = scanGeneration;
   try {
     const response = await fetch(`${apiBase}/api/reports/${encodeURIComponent(publicId)}`);
-    if (response.ok) {
+    if (response.ok && generation === scanGeneration) {
       renderResults(await response.json());
     }
   } catch (error) {
@@ -1259,8 +1302,35 @@ async function openReportFromUrl() {
 }
 
 function closePremiumModal() {
+  if (premiumModal.hidden) return;
   premiumModal.hidden = true;
+  if (premiumModalOpener && typeof premiumModalOpener.focus === "function" && document.contains(premiumModalOpener)) {
+    premiumModalOpener.focus();
+  }
+  premiumModalOpener = null;
 }
+
+// Escape closes the dialog and Tab stays inside it while it is open.
+document.addEventListener("keydown", (event) => {
+  if (premiumModal.hidden) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closePremiumModal();
+    return;
+  }
+  if (event.key !== "Tab") return;
+  const focusables = premiumModalFocusables();
+  if (!focusables.length) return;
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  if (event.shiftKey && (document.activeElement === first || !premiumModal.contains(document.activeElement))) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (document.activeElement === last || !premiumModal.contains(document.activeElement))) {
+    event.preventDefault();
+    first.focus();
+  }
+});
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -1271,11 +1341,14 @@ form.addEventListener("submit", async (event) => {
   }
 
   scanGeneration += 1;
+  const generation = scanGeneration;
   cancelBackendUpgrade();
   setLoading(true);
   startScanProgress();
   try {
-    const report = await buildReport();
+    const report = await buildReport(generation);
+    // The user pressed Clear or loaded the sample while this scan was in flight: drop it.
+    if (generation !== scanGeneration) return;
     await finishScanProgress();
     renderResults(report);
     scrollToResults();
@@ -1523,4 +1596,7 @@ if (pricingSection && "IntersectionObserver" in window) {
 
 // Warm the free-tier backend on initial load so the first scan/upload avoids a cold start.
 warmBackend();
-loadPaymentConfig().then(openReportFromUrl);
+// In parallel: the return trip from checkout must not wait on a cold backend's config answer
+// before it starts confirming the payment.
+loadPaymentConfig();
+openReportFromUrl();

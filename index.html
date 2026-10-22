@@ -16,14 +16,14 @@
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://javajobfit.com/" />
-    <meta property="og:image" content="https://javajobfit.com/assets/og-image.svg" />
+    <meta property="og:image" content="https://javajobfit.com/assets/og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="JavaJobFit - ATS Resume Checker for Java Developers" />
     <meta
       name="twitter:description"
       content="ATS-style resume checker for Java developers. Raw resume text is not stored."
     />
-    <meta name="twitter:image" content="https://javajobfit.com/assets/og-image.svg" />
+    <meta name="twitter:image" content="https://javajobfit.com/assets/og-image.png" />
     <meta name="theme-color" content="#0f684f" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -32,7 +32,7 @@
       href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260701-print1" />
+    <link rel="stylesheet" href="styles.css?v=20261022-audit" />
     <script type="application/ld+json">
       [
         {
@@ -127,7 +127,7 @@
             <label class="secondary-action upload-action" for="resume-file">
               Upload PDF/DOCX resume
             </label>
-            <input id="resume-file" type="file" accept=".pdf,.doc,.docx,.txt" hidden />
+            <input id="resume-file" class="visually-hidden" type="file" accept=".pdf,.doc,.docx,.txt" />
             <p id="upload-status">Paste text remains the fastest fallback. Uploaded files are only used to extract text and are not stored.</p>
           </div>
 
@@ -170,7 +170,7 @@
         </form>
       </section>
 
-      <section class="results-panel" aria-live="polite">
+      <section class="results-panel">
         <div class="empty-state" id="empty-state">
           <div class="score-placeholder">Score will appear after analysis</div>
           <h2>Ready for your first resume scan.</h2>
@@ -188,7 +188,7 @@
           </div>
           <div class="progress-copy">
             <p class="eyebrow">Scanning Java resume</p>
-            <h2 id="progress-status">Preparing your ATS-style scan...</h2>
+            <h2 id="progress-status" role="status">Preparing your ATS-style scan...</h2>
             <div class="progress-track" aria-hidden="true">
               <span id="progress-bar"></span>
             </div>
@@ -385,6 +385,7 @@
                 />
                 <textarea
                   id="feedback-message"
+                  maxlength="2000"
                   rows="3"
                   placeholder="What should we improve before this becomes a paid product?"
                   required
@@ -535,7 +536,7 @@
 
     <div class="modal-backdrop" id="premium-modal" hidden>
       <section class="modal" role="dialog" aria-modal="true" aria-labelledby="premium-modal-title">
-        <button type="button" class="modal-close" id="premium-close" aria-label="Close early access modal">×</button>
+        <button type="button" class="modal-close" id="premium-close" aria-label="Close">×</button>
         <p class="eyebrow">Launch offer</p>
         <h2 id="premium-modal-title">Unlock the full JavaJobFit Pro Report</h2>
         <div class="price-list">
@@ -574,6 +575,6 @@
     </div>
 
     <script src="config.js?v=20260601-ats2"></script>
-    <script src="app.js?v=20261022-live-labels"></script>
+    <script src="app.js?v=20261022-audit"></script>
   </body>
 </html>

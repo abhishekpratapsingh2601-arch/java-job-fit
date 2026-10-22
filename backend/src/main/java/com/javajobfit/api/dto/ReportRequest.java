@@ -6,11 +6,13 @@ import javax.validation.constraints.Size;
 
 public class ReportRequest {
     @NotBlank(message = "Resume is required.")
-    @Size(min = 40, max = 12000, message = "Please paste a longer resume for a useful scan.")
+    @Size(min = 40, message = "Please paste a longer resume for a useful scan.")
+    @Size(max = 12000, message = "Your resume is over 12,000 characters. Trim older roles or long lists and try again.")
     private String resumeText;
 
     @NotBlank(message = "Job description is required.")
-    @Size(min = 40, max = 12000, message = "Please paste a longer job description for a useful scan.")
+    @Size(min = 40, message = "Please paste a longer job description for a useful scan.")
+    @Size(max = 12000, message = "The job description is over 12,000 characters. Paste only the role and requirements sections.")
     private String jobDescription;
 
     @NotBlank(message = "Experience level is required.")
