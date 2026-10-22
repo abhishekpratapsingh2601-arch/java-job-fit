@@ -5,8 +5,14 @@ COPY src ./src
 RUN mvn -q -DskipTests package
 
 FROM eclipse-temurin:11-jre
+# Run as an unprivileged user: if anything in the upload/parse path is ever exploited, it gets
+# no root inside the container.
+RUN useradd --system --uid 10001 --no-create-home app
 WORKDIR /app
 COPY --from=build /app/target/javajobfit-backend-0.0.1-SNAPSHOT.jar app.jar
+# The only directory the app writes to (the local H2 fallback); prod uses Postgres.
+RUN mkdir -p /app/data && chown app /app/data
+USER app
 ENV PORT=8080
 # glibc malloc arenas default to 8x host cores; on a big Render node that bloats RSS in a
 # 512MB cgroup. Two arenas is plenty for this thread count.
@@ -27,8 +33,11 @@ EXPOSE 8080
 #    175MB total RSS locally, so 192m heap is ample at beta traffic.
 #  - Xss512k: smaller thread stacks, more headroom in 512MB.
 #  - spring.jmx.enabled=false: skip JMX bean export at boot.
+#  - ExitOnOutOfMemoryError: a JVM that hit OOM is in an unknown state; exit so Render restarts it
+#    cleanly instead of serving errors from a half-broken process.
 CMD ["java", \
   "-XX:TieredStopAtLevel=1", \
+  "-XX:+ExitOnOutOfMemoryError", \
   "-Xms64m", \
   "-Xmx192m", \
   "-XX:MaxMetaspaceSize=128m", \

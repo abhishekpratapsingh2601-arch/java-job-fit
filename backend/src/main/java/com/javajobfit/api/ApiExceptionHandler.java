@@ -4,6 +4,10 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
@@ -21,6 +25,8 @@ import com.javajobfit.service.ReportNotFoundException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
+
     @ExceptionHandler(ReportNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public Map<String, String> handleReportNotFound(ReportNotFoundException exception) {
@@ -104,7 +110,35 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public Map<String, String> handleUnexpected(Exception exception) {
+    public Map<String, String> handleUnexpected(Exception exception, HttpServletRequest request) {
+        // Exception messages are deliberately left out: some (parsers, JDBC) echo request content,
+        // and raw resume text must never reach the logs. Class names and the failing frame are
+        // enough to find the bug.
+        log.error("Unhandled error on {} {}: {} at {}",
+                request.getMethod(), request.getRequestURI(), causeChain(exception), firstFrame(exception));
         return Collections.singletonMap("error", "Something went wrong. Please try again.");
+    }
+
+    static String causeChain(Throwable exception) {
+        StringBuilder chain = new StringBuilder();
+        Throwable current = exception;
+        for (int depth = 0; current != null && depth < 5; depth++) {
+            if (chain.length() > 0) {
+                chain.append(" <- ");
+            }
+            chain.append(current.getClass().getName());
+            current = current.getCause() == current ? null : current.getCause();
+        }
+        return chain.toString();
+    }
+
+    private static String firstFrame(Throwable exception) {
+        for (StackTraceElement frame : exception.getStackTrace()) {
+            if (frame.getClassName().startsWith("com.javajobfit")) {
+                return frame.toString();
+            }
+        }
+        StackTraceElement[] frames = exception.getStackTrace();
+        return frames.length > 0 ? frames[0].toString() : "unknown";
     }
 }

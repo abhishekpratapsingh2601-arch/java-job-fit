@@ -17,6 +17,11 @@
   <description>Spring Boot API for JavaJobFit resume reports</description>
 
   <properties>
+    <!-- 3.2.2+ fixes the XFA-in-PDF XXE (CVE-2025-54988, CVE-2025-66516); 2.x is end of life. -->
+    <tika.version>3.3.2</tika.version>
+    <!-- Spring Boot 2.7 pins commons-lang3 3.12, which Tika 3's commons-compress cannot run on
+         (NoClassDefFoundError: SystemProperties). Tika asks for 3.20; 3.18+ also fixes CVE-2025-48924. -->
+    <commons-lang3.version>3.20.0</commons-lang3.version>
     <java.version>11</java.version>
   </properties>
 
@@ -50,7 +55,7 @@
     <dependency>
       <groupId>org.apache.tika</groupId>
       <artifactId>tika-core</artifactId>
-      <version>2.9.2</version>
+      <version>${tika.version}</version>
     </dependency>
     <!-- Only the parser modules for formats the upload endpoint accepts (pdf, doc/docx, txt).
          The full tika-parsers-standard-package pulls in parsers for hundreds of formats and
@@ -58,17 +63,17 @@
     <dependency>
       <groupId>org.apache.tika</groupId>
       <artifactId>tika-parser-pdf-module</artifactId>
-      <version>2.9.2</version>
+      <version>${tika.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.tika</groupId>
       <artifactId>tika-parser-microsoft-module</artifactId>
-      <version>2.9.2</version>
+      <version>${tika.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.tika</groupId>
       <artifactId>tika-parser-text-module</artifactId>
-      <version>2.9.2</version>
+      <version>${tika.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>

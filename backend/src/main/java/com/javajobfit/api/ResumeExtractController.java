@@ -23,6 +23,8 @@ import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.Parser;
+import org.apache.tika.parser.pdf.PDFParserConfig;
 import org.apache.tika.sax.BodyContentHandler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -53,6 +55,9 @@ public class ResumeExtractController {
             new ArrayBlockingQueue<>(4),
             new ThreadPoolExecutor.AbortPolicy());
 
+    // Thread-safe and expensive to build (it loads Tika's parser registry), so build it once.
+    private final Parser parser = new AutoDetectParser();
+
     @PreDestroy
     void shutdownParsePool() {
         parsePool.shutdownNow();
@@ -70,6 +75,12 @@ public class ResumeExtractController {
             return badRequest(UNREADABLE_MESSAGE);
         }
 
+        // Shed load before reading the upload into memory: a burst of 5MB files must not all land
+        // on the 192MB heap only to be rejected by a full parse queue afterwards.
+        if (parsePool.getQueue().remainingCapacity() == 0) {
+            return busy();
+        }
+
         final byte[] bytes;
         try {
             bytes = file.getBytes();
@@ -82,9 +93,7 @@ public class ResumeExtractController {
         try {
             parseTask = parsePool.submit(() -> parseToText(bytes, safeName));
         } catch (RejectedExecutionException busy) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(Collections.singletonMap(
-                            "error", "Resume upload is busy right now. Please try again in a minute or paste your resume text."));
+            return busy();
         }
 
         String extracted;
@@ -101,7 +110,7 @@ public class ResumeExtractController {
             return badRequest(UNREADABLE_MESSAGE);
         }
 
-        extracted = extracted.replaceAll("\\s+", " ").trim();
+        extracted = normalizeWhitespace(extracted);
         if (extracted.length() < 40) {
             return badRequest(UNREADABLE_MESSAGE);
         }
@@ -118,13 +127,39 @@ public class ResumeExtractController {
         ContentHandler handler = new BodyContentHandler(MAX_CHARACTERS + 1);
         Metadata metadata = new Metadata();
         metadata.set(TikaCoreProperties.RESOURCE_NAME_KEY, resourceName);
+        ParseContext context = new ParseContext();
+        // Resumes never need PDF form (AcroForm/XFA) content, and XFA is XML from the uploader:
+        // skipping it removes that attack surface entirely, on top of the patched Tika version.
+        PDFParserConfig pdfConfig = new PDFParserConfig();
+        pdfConfig.setExtractAcroFormContent(false);
+        context.set(PDFParserConfig.class, pdfConfig);
         try (InputStream input = new ByteArrayInputStream(bytes)) {
-            new AutoDetectParser().parse(input, handler, metadata, new ParseContext());
+            parser.parse(input, handler, metadata, context);
         } catch (WriteLimitReachedException reachedLimit) {
             // Expected for long resumes: keep the partial text already captured by the handler
             // and let the caller truncate, instead of rejecting a valid 4-5 page resume.
         }
         return handler.toString();
+    }
+
+    /**
+     * Tidies extracted text while keeping line structure: the analyzer finds resume sections and
+     * bullet points by line, so flattening every newline to a space cost uploaded resumes the
+     * readability credit that the same resume earns when pasted.
+     */
+    static String normalizeWhitespace(String text) {
+        return text
+                .replaceAll("\\r\\n?", "\n")
+                .replaceAll("[ \\t\\x0B\\f\\u00A0]+", " ")
+                .replaceAll("(?m)^ +| +$", "")
+                .replaceAll("\n{3,}", "\n\n")
+                .trim();
+    }
+
+    private ResponseEntity<Map<String, String>> busy() {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Collections.singletonMap(
+                        "error", "Resume upload is busy right now. Please try again in a minute or paste your resume text."));
     }
 
     private ResponseEntity<Map<String, String>> badRequest(String message) {

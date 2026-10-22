@@ -149,4 +149,16 @@ class RateLimitFilterTest {
         minute[0] = 101L;
         assertThat(run(filter, post("/api/reports", "1.1.1.1"))).isEqualTo(200);
     }
+
+    @Test
+    void decoratingThePathCannotSkipTheLimiter() throws Exception {
+        RateLimitFilter filter = new RateLimitFilter(1, 1);
+
+        // Spring routes all of these to the same handlers, so they must share the same buckets.
+        assertThat(run(filter, post("/api;x=1/reports", "1.1.1.1"))).isEqualTo(200);
+        assertThat(run(filter, post("//api/reports", "1.1.1.1"))).isEqualTo(429);
+
+        assertThat(run(filter, post("/api/resume;x=1/extract", "1.1.1.1"))).isEqualTo(200);
+        assertThat(run(filter, post("/api//resume/extract", "1.1.1.1"))).isEqualTo(429);
+    }
 }

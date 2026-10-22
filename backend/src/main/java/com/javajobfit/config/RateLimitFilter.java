@@ -12,6 +12,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -25,6 +27,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * than one instance, each instance enforces its own window, which still bounds total abuse.
  */
 @Component
+// After the header and body-size filters, before any controller work.
+@Order(Ordered.HIGHEST_PRECEDENCE + 30)
 public class RateLimitFilter extends OncePerRequestFilter {
     private static final int MAX_TRACKED_KEYS = 10_000;
     private static final String LIMIT_MESSAGE =
@@ -41,16 +45,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
         this.extractPerMinute = extractPerMinute;
     }
 
+    // Every POST is limited, not just ones whose raw URI starts with "/api/": Spring routes
+    // "/api;x/reports" and "//api/reports" to the same handler, so a prefix check on the raw URI
+    // let a client skip the limiter by decorating the path.
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String uri = request.getRequestURI();
-        return !"POST".equalsIgnoreCase(request.getMethod()) || uri == null || !uri.startsWith("/api/");
+        return !"POST".equalsIgnoreCase(request.getMethod());
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        boolean extract = request.getRequestURI().startsWith("/api/resume/extract");
+        boolean extract = normalizedPath(request).startsWith("/api/resume/extract");
         int limit = extract ? extractPerMinute : apiPostPerMinute;
         long minute = currentMinute();
         String key = clientKey(request) + "|" + (extract ? "extract" : "api");
@@ -67,6 +73,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         evictStaleEntriesIfNeeded(minute);
         chain.doFilter(request, response);
+    }
+
+    /** The request path as Spring routes it: ";params" stripped and repeated slashes collapsed. */
+    static String normalizedPath(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        if (uri == null) {
+            return "";
+        }
+        return uri.replaceAll(";[^/]*", "").replaceAll("/{2,}", "/");
     }
 
     /** Overridable in tests to simulate window rollover. */

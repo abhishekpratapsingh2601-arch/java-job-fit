@@ -1,5 +1,9 @@
 server:
   port: "${PORT:8080}"
+  tomcat:
+    # Url-encoded form bodies are parsed by Tomcat itself, outside RequestBodyLimitFilter's
+    # stream wrapper, so give them the same 128KB ceiling (default is 2MB).
+    max-http-form-post-size: 128KB
   error:
     include-message: never
     include-binding-errors: never
