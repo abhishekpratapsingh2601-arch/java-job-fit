@@ -12,7 +12,7 @@ Supabase public schema currently has no JavaJobFit app tables. Keep `SPRING_FLYW
 
 Supabase Free projects may be paused after low activity. If the JavaJobFit project is paused, backend database calls will fail until the project is restored from the Supabase dashboard.
 
-For beta, use the app normally or run deployment checks after deploy. Do not rely on fake keep-alive traffic or cron jobs just to bypass Supabase inactivity rules. For serious production usage, upgrade to Supabase Pro to avoid inactivity pausing and get proper backup options. The Free plan may not include dashboard backups, so keep export and check docs ready before real users or revenue.
+For beta, use the app normally or run deployment checks after deploy. The keep-alive jobs in `KEEP_WARM_SETUP.md` keep the free tiers awake for beta. Once revenue covers it, Supabase Pro removes the inactivity pause and adds daily backups. Until then the Free plan has no backups you can restore, so take the manual backup in "Database Backups" below.
 
 Manual restore steps:
 
@@ -28,21 +28,22 @@ Manual restore steps:
 
 ## Supabase Production Database
 
-Use the Supabase direct PostgreSQL connection for the Render backend and Flyway migrations. Do not use the transaction pooler for migrations.
+Production uses the Supabase **session pooler** (Supabase dashboard → Connect → Session pooler). The direct host `db.YOUR_PROJECT_REF.supabase.co` is IPv6-only on the free plan, and Render cannot reach it.
 
 Use:
 
-- Direct host: `db.YOUR_PROJECT_REF.supabase.co`
-- Direct port: `5432`
+- Session pooler host: `aws-0-YOUR_REGION.pooler.supabase.com`
+- Port: `5432` (session mode)
+- Username: `postgres.YOUR_PROJECT_REF`
 - SSL required in the JDBC URL
 
 Example JDBC URL format:
 
 ```text
-jdbc:postgresql://db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require
+jdbc:postgresql://aws-0-YOUR_REGION.pooler.supabase.com:5432/postgres?sslmode=require
 ```
 
-Do not use the Supabase transaction pooler port `6543` for Flyway migrations. Flyway needs a direct database connection so it can create and validate `flyway_schema_history` safely.
+Do not use the transaction pooler port `6543`: Flyway needs a session-mode connection so it can create and validate `flyway_schema_history` safely.
 
 Because the JavaJobFit schema is empty for the first production deploy, keep:
 
@@ -77,8 +78,8 @@ SPRING_FLYWAY_ENABLED=true
 SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
 SPRING_JPA_HIBERNATE_DDL_AUTO=validate
 PAYMENT_PROVIDER_ENABLED=false
-SPRING_DATASOURCE_URL=jdbc:postgresql://db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require
-SPRING_DATASOURCE_USERNAME=your_supabase_db_username
+SPRING_DATASOURCE_URL=jdbc:postgresql://aws-0-YOUR_REGION.pooler.supabase.com:5432/postgres?sslmode=require
+SPRING_DATASOURCE_USERNAME=postgres.YOUR_PROJECT_REF
 SPRING_DATASOURCE_PASSWORD=your_supabase_db_password
 ALLOWED_ORIGINS=https://javajobfit.com,https://www.javajobfit.com,https://abhishekpratapsingh2601-arch.github.io
 ```
@@ -87,7 +88,7 @@ Do not commit real database passwords, Supabase credentials, Stripe keys, Razorp
 
 Do not set `SPRING_FLYWAY_BASELINE_ON_MIGRATE=true` for this first deploy because the JavaJobFit app schema is empty. Use `false` so Flyway creates the initial schema from versioned migrations.
 
-Render should use the Supabase direct PostgreSQL URL on port `5432`, not the transaction pooler URL on port `6543`.
+Render should use the Supabase session pooler URL on port `5432`, not the transaction pooler URL on port `6543`.
 
 ## Backend Deploy
 
@@ -115,7 +116,7 @@ Check Render in this order:
 5. Confirm the Java runtime is Java 11 in the Dockerfile.
 6. Open **Environment** and confirm the required variables from `render-env.example.txt` exist.
 7. Confirm `SPRING_PROFILES_ACTIVE=prod`.
-8. Confirm `SPRING_DATASOURCE_URL` uses the Supabase direct PostgreSQL host on port `5432` with `sslmode=require`.
+8. Confirm `SPRING_DATASOURCE_URL` uses the Supabase session pooler host on port `5432` with `sslmode=require`.
 9. Do not use the Supabase transaction pooler port `6543` for Flyway migrations.
 10. Confirm `SPRING_DATASOURCE_USERNAME` and `SPRING_DATASOURCE_PASSWORD` are set in Render, not committed to the repo.
 11. Confirm `SPRING_FLYWAY_ENABLED=true`.
@@ -170,8 +171,8 @@ SPRING_PROFILES_ACTIVE=prod \
 SPRING_FLYWAY_ENABLED=true \
 SPRING_FLYWAY_BASELINE_ON_MIGRATE=false \
 SPRING_JPA_HIBERNATE_DDL_AUTO=validate \
-SPRING_DATASOURCE_URL="jdbc:postgresql://db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require" \
-SPRING_DATASOURCE_USERNAME="postgres" \
+SPRING_DATASOURCE_URL="jdbc:postgresql://aws-0-YOUR_REGION.pooler.supabase.com:5432/postgres?sslmode=require" \
+SPRING_DATASOURCE_USERNAME="postgres.YOUR_PROJECT_REF" \
 SPRING_DATASOURCE_PASSWORD="YOUR_SUPABASE_DB_PASSWORD" \
 mvn -Dmaven.repo.local=./.m2 spring-boot:run
 ```
@@ -242,11 +243,27 @@ repeated failures, which makes cron-job.org auto-disable the keep-warm job and l
 instance sleep again. `/api/health/db` is for manual monitoring only.
 
 See `KEEP_WARM_SETUP.md` for the exact cron-job.org settings. The GitHub Actions workflow
-`.github/workflows/keepalive.yml` is manual-only (`workflow_dispatch`) and is not the
-scheduled pinger.
+`.github/workflows/keepalive.yml` runs hourly through the day as a backstop DB keeper
+(GitHub may delay or drop ticks), and can also be run by hand. cron-job.org is still the
+keep-warm pinger.
 
 ## Privacy Rules
 
 Do not store raw resume text, raw job description text, uploaded files, analytics payloads containing raw input, or stack traces containing user input.
 
 Only generated report output, optional lead email data, optional feedback, experience level, country, report ID/public ID, consent, source, timestamps, and safe metadata may be stored.
+
+## Database Backups
+
+The Supabase Free plan has no restorable backups, and the `payments` table is now the only record of who paid. Take a dump every week, and before any risky migration. Run it on your own machine, never in GitHub Actions (this repo is public, so artifacts would be too):
+
+```bash
+pg_dump "postgresql://postgres.YOUR_PROJECT_REF@aws-0-YOUR_REGION.pooler.supabase.com:5432/postgres?sslmode=require" --no-owner --format=custom --file="javajobfit-$(date +%F).dump"
+```
+
+`pg_dump` prompts for the database password. Keep the dumps outside the repo folder.
+
+## Rollback
+
+- **Code:** Render → the service → Events → pick the last good deploy → **Rollback**.
+- **Database:** Flyway migrations only move forward. Rolling code back is safe only when the newer migration just added things (tables, columns, indexes). If a migration removed or renamed something, write a new forward migration instead of rolling back.

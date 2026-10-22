@@ -103,7 +103,7 @@ cron-job.org switched the keep-warm job off. It went unnoticed until 7 Aug, and 
 meantime every visitor paid a ~60s cold start — or simply couldn't upload a PDF at all.
 
 Mitigations now in place: the *"disabled because of too many failures"* notification is ON
-for both jobs, and the heap is capped at 50% so the OOM cause is fixed.
+for both jobs, and the heap is now a fixed `-Xmx192m` (see `backend/Dockerfile`), so the OOM cause is fixed.
 
 To check in one command — under a second means warm, ~60s means it slept and the keep-warm
 job is not doing its job:

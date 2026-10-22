@@ -38,6 +38,9 @@ on:
     # are free; each run is ~5s warm or ~70s cold.
     - cron: "5 2-21 * * *"
 
+# Only curls a public URL: it needs no access to the repository or its token.
+permissions: {}
+
 concurrency:
   group: keepalive
   cancel-in-progress: true

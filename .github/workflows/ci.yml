@@ -1,0 +1,39 @@
+name: Backend tests
+
+# Render auto-deploys master with -DskipTests, so this is the only place the suite runs before
+# code goes live. Public-repo Actions minutes are free. In Render, set Auto-Deploy to
+# "After CI Checks Pass" so a red run blocks the deploy.
+
+on:
+  push:
+    branches: [master]
+    paths: ["backend/**", ".github/workflows/ci.yml"]
+  pull_request:
+    paths: ["backend/**", ".github/workflows/ci.yml"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "11"
+          cache: maven
+      - name: Run tests
+        # .mvn/settings.xml points localRepository at ./.m2 (for local runs); override it so
+        # setup-java's cache of ~/.m2/repository is actually used.
+        run: mvn -B --settings=.mvn/settings.xml -Dmaven.repo.local=$HOME/.m2/repository test
