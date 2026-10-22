@@ -1120,6 +1120,12 @@ async function loadPaymentConfig() {
     premiumPriceNodes.forEach((node) => {
       if (node) node.textContent = String(paymentConfig.priceInr);
     });
+    // Swap the "coming soon" copy for live checkout copy only when the server says payments are on.
+    if (paymentConfig.enabled) {
+      document.querySelectorAll("[data-live-text]").forEach((node) => {
+        node.textContent = node.dataset.liveText.replace("{price}", String(paymentConfig.priceInr));
+      });
+    }
   } catch (error) {
     // Offline or backend asleep: leave the safe default (payments off).
   }
