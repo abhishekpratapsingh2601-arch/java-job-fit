@@ -17,6 +17,12 @@ app:
   rate-limit:
     api-post-per-minute: "${RATE_LIMIT_API_POST_PER_MINUTE:30}"
     extract-per-minute: "${RATE_LIMIT_EXTRACT_PER_MINUTE:10}"
+    # Backstop that holds however client identity is forged (see ClientIpResolver).
+    global-api-post-per-minute: "${RATE_LIMIT_GLOBAL_API_POST_PER_MINUTE:600}"
+    global-extract-per-minute: "${RATE_LIMIT_GLOBAL_EXTRACT_PER_MINUTE:60}"
+    # Strict CF-Connecting-IP checking. Enable only after the "Client IP headers" boot log line
+    # shows "nearest hop trusted=true" or "nearest hop matches CF-Connecting-IP=true".
+    verify-cloudflare-hop: "${RATE_LIMIT_VERIFY_CLOUDFLARE_HOP:false}"
   payment:
     # Master switch. While false the payment endpoints return 503 and no Razorpay call is ever
     # made, so the code can ship before the account is live.
@@ -39,17 +45,17 @@ spring:
     # startup as before. JPA/Hibernate init happens on the first DB-touching request instead,
     # so the first request after a deploy is a little slower.
     lazy-initialization: true
+  web:
+    resources:
+      # This API serves no static files. Turning the default /** resource handler off removes
+      # the whole class of Spring MVC static-resource advisories (path traversal, cache, DoS).
+      add-mappings: false
   servlet:
     multipart:
       max-file-size: 5MB
       max-request-size: 6MB
   datasource:
     url: "${DATABASE_URL:jdbc:h2:file:./data/javajobfit;AUTO_SERVER=TRUE}"
-  web:
-    resources:
-      # This API serves no static files. Turning the default /** resource handler off removes
-      # the whole class of Spring MVC static-resource advisories (path traversal, cache, DoS).
-      add-mappings: false
     username: "${DATABASE_USERNAME:sa}"
     password: "${DATABASE_PASSWORD:}"
     driver-class-name: "${DATABASE_DRIVER:org.h2.Driver}"

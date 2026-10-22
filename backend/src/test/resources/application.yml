@@ -6,6 +6,8 @@ app:
     # RateLimitFilterTest exercises the limiting behavior directly with small limits.
     api-post-per-minute: 100000
     extract-per-minute: 100000
+    global-api-post-per-minute: 100000
+    global-extract-per-minute: 100000
 
 spring:
   datasource:
