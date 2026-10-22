@@ -272,3 +272,54 @@ Side effects to know about:
   - CSP.
   - Lead double opt-in.
   - Render Starter once revenue pays for it (your rule).
+
+## Addendum — pre-deployment checks (22 Oct 2026, later the same day)
+
+**Dependencies, all within Spring Boot 2.7 / Java 11:**
+
+| Library | Before | After |
+|---|---|---|
+| Tomcat | 9.0.83 | 9.0.123 |
+| Spring Framework | 5.3.31 | 5.3.39 |
+| logback | 1.2.12 | 1.2.13 |
+| PostgreSQL driver | 42.3.8 | 42.3.10 |
+| snakeyaml | 1.30 | 1.33 |
+| jsoup | 1.22.2 | 1.23.2 |
+
+Spring's default static-resource handler is also off; this API serves no files. According to
+OSV.dev, the patched versions have no advisories left for Tomcat, jsoup or logback-classic.
+
+The remaining OSV matches are in Spring Boot/Framework/Data, Jackson, logback-core, snakeyaml,
+H2, pgjdbc and log4j-api. Each was checked against how the app uses that library; see the
+deployment notes. The remaining matches either need features this app does not use (actuator,
+SpEL with user input, polymorphic Jackson typing, YAML from users, H2 console, Pageable/Sort
+binding, static resources, JSP or XSLT views), or they only have fixes in Boot 3 / Framework 6+.
+
+**Client IP trust:**
+
+Verified live:
+- Cloudflare rejects client-supplied `CF-Connecting-IP` (error 1000).
+- Forged `True-Client-IP` and `X-Forwarded-For` values do not create new buckets.
+
+Changes:
+- `True-Client-IP` is no longer trusted.
+- New global per-minute caps (600 API, 60 extract) bound any identity forgery, including a
+  request sent straight to the origin.
+- Optional strict mode (`RATE_LIMIT_VERIFY_CLOUDFLARE_HOP`) trusts `CF-Connecting-IP` only from
+  Cloudflare or private hops. It is off by default until the boot log confirms Render's proxy
+  layout.
+- The Razorpay webhook is exempt from rate limiting. It is HMAC-authenticated, and limiting it
+  could delay real unlocks.
+
+**Payment rollback compatibility:**
+
+- The first link for each report uses the plain report id again, the format every earlier version
+  parses.
+- A suffixed reference is used only for a later link (after a price change) or after Razorpay
+  rejects the plain reference.
+- Two simultaneous copies of one webhook: the copy that loses the unique-index race is retried
+  once and answered as a replay (200).
+- Verified on real PostgreSQL in the production Docker image.
+
+**Tests:** 122 run, 122 passed, 0 failed, 0 skipped.
+
