@@ -1314,3 +1314,52 @@ li {
   margin-top: 1.75rem;
   line-height: 2;
 }
+
+/* Human review page: UPI QR + pay button side by side, stacked on phones. */
+.review-pay {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid rgba(35, 122, 91, 0.28);
+  background: #f7fbf7;
+}
+
+.review-qr {
+  flex: 0 0 auto;
+  width: 200px;
+  height: 200px;
+  background: #fff;
+}
+
+.review-pay-details {
+  min-width: 0;
+}
+
+.legal-page .review-upi-button,
+.legal-page .review-upi-button:hover {
+  color: var(--panel);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  text-decoration: none;
+}
+
+.review-copy {
+  min-height: 32px;
+  margin-left: 6px;
+  padding: 0 10px;
+}
+
+.review-callout {
+  margin-top: 14px;
+}
+
+@media (max-width: 600px) {
+  .review-pay {
+    flex-direction: column;
+    align-items: center;
+  }
+}
