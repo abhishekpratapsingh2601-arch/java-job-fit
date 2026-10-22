@@ -45,6 +45,11 @@ spring:
       max-request-size: 6MB
   datasource:
     url: "${DATABASE_URL:jdbc:h2:file:./data/javajobfit;AUTO_SERVER=TRUE}"
+  web:
+    resources:
+      # This API serves no static files. Turning the default /** resource handler off removes
+      # the whole class of Spring MVC static-resource advisories (path traversal, cache, DoS).
+      add-mappings: false
     username: "${DATABASE_USERNAME:sa}"
     password: "${DATABASE_PASSWORD:}"
     driver-class-name: "${DATABASE_DRIVER:org.h2.Driver}"

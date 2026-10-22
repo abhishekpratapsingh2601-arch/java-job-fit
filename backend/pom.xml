@@ -22,8 +22,27 @@
     <!-- Spring Boot 2.7 pins commons-lang3 3.12, which Tika 3's commons-compress cannot run on
          (NoClassDefFoundError: SystemProperties). Tika asks for 3.20; 3.18+ also fixes CVE-2025-48924. -->
     <commons-lang3.version>3.20.0</commons-lang3.version>
+    <!-- Boot 2.7.18 ships Tomcat 9.0.83; later 9.0.x releases carry security fixes and stay on the
+         same Servlet 4 / javax API, so this is a drop-in bump within Boot's supported line. -->
+    <tomcat.version>9.0.123</tomcat.version>
+    <!-- Last patch releases of the lines Boot 2.7.18 was built on: drop-in, same APIs. -->
+    <spring-framework.version>5.3.39</spring-framework.version>
+    <logback.version>1.2.13</logback.version>
+    <postgresql.version>42.3.10</postgresql.version>
+    <snakeyaml.version>1.33</snakeyaml.version>
     <java.version>11</java.version>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Pulled in by Tika's HTML module; 1.23.2 fixes CVE-2026-75140 and CVE-2026-71497. -->
+      <dependency>
+        <groupId>org.jsoup</groupId>
+        <artifactId>jsoup</artifactId>
+        <version>1.23.2</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
