@@ -6,6 +6,7 @@ import java.util.Map;
 
 import javax.validation.Valid;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -59,7 +60,16 @@ public class PaymentController {
     public ResponseEntity<Map<String, Object>> webhook(
             @RequestBody String rawBody,
             @RequestHeader(value = "X-Razorpay-Signature", required = false) String signature) {
-        boolean unlocked = paymentService.handleWebhook(rawBody, signature);
+        boolean unlocked;
+        try {
+            unlocked = paymentService.handleWebhook(rawBody, signature);
+        } catch (DataIntegrityViolationException concurrentDelivery) {
+            // Razorpay delivered the same event twice at once and the other delivery inserted the
+            // payment row first (unique link id). Re-run in a fresh transaction: it now sees that
+            // row and finishes as an ordinary replay. A different integrity problem fails again
+            // and surfaces as a 500, so Razorpay keeps retrying instead of the event being lost.
+            unlocked = paymentService.handleWebhook(rawBody, signature);
+        }
         return ResponseEntity.ok(Collections.singletonMap("unlocked", unlocked));
     }
 }

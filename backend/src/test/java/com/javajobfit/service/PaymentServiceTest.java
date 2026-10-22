@@ -222,27 +222,99 @@ class PaymentServiceTest {
     }
 
     @Test
-    void everyLinkGetsAFreshReferenceThatStillLeadsBackToTheReport() throws Exception {
-        // If Razorpay created a link but we never saved it (timeout), the retry must not reuse the
-        // same reference_id — Razorpay would reject it and the report could never be bought.
+    void theFirstLinkUsesThePlainReportIdSoARolledBackBackendCanStillUnlockIt() {
         when(razorpayClient.createPaymentLink(anyString(), anyInt(), anyString(), anyString()))
-                .thenThrow(new IllegalStateException("simulated timeout"))
                 .thenReturn(new RazorpayClient.PaymentLink("plink_test_1", "https://rzp.io/i/abc123"));
 
-        assertThatThrownBy(() -> paymentService.createPaymentLink(publicId)).isInstanceOf(IllegalStateException.class);
-        assertThat(paymentService.createPaymentLink(publicId)).isEqualTo("https://rzp.io/i/abc123");
+        paymentService.createPaymentLink(publicId);
+
+        // Exactly the reference format every earlier backend version parses.
+        verify(razorpayClient).createPaymentLink(eq(publicId), anyInt(), anyString(), anyString());
+    }
+
+    @Test
+    void aLinkMadeAfterAPriceChangeGetsAFreshReferenceThatStillUnlocks() throws Exception {
+        when(razorpayClient.createPaymentLink(anyString(), anyInt(), anyString(), anyString()))
+                .thenReturn(new RazorpayClient.PaymentLink("plink_old", "https://rzp.io/i/old"))
+                .thenReturn(new RazorpayClient.PaymentLink("plink_test_1", "https://rzp.io/i/new"));
+        paymentService.createPaymentLink(publicId);
+        ReflectionTestUtils.setField(paymentService, "priceInr", 99);
+        paymentService.createPaymentLink(publicId);
 
         ArgumentCaptor<String> references = ArgumentCaptor.forClass(String.class);
         verify(razorpayClient, times(2)).createPaymentLink(references.capture(), anyInt(), anyString(), anyString());
-        assertThat(references.getAllValues()).allSatisfy(reference -> {
-            assertThat(reference).startsWith(publicId + "-").hasSize(40);
-        });
-        assertThat(references.getAllValues().get(0)).isNotEqualTo(references.getAllValues().get(1));
+        assertThat(references.getAllValues().get(0)).isEqualTo(publicId);
+        // Razorpay rejects a repeated reference_id, so the second link must differ.
+        assertThat(references.getAllValues().get(1)).startsWith(publicId + "-").hasSize(40);
 
-        // A webhook carrying a suffixed reference for a link we have no row for still finds the report.
-        paymentRepository.deleteAll();
-        assertThat(deliver(webhookBody(references.getAllValues().get(1), 8900, "payment_link.paid"))).isTrue();
+        String body = webhookBody(references.getAllValues().get(1), 9900, "payment_link.paid");
+        assertThat(deliver(body)).isTrue();
         assertThat(isPaid()).isTrue();
+    }
+
+    @Test
+    void aLostRazorpayResponseDoesNotMakeTheReportUnbuyable() throws Exception {
+        // 1st: Razorpay created the link but the response never arrived (timeout, nothing saved).
+        // 2nd: the plain reference is now taken, so Razorpay answers 400. 3rd: fresh reference.
+        when(razorpayClient.createPaymentLink(anyString(), anyInt(), anyString(), anyString()))
+                .thenThrow(new org.springframework.web.client.ResourceAccessException("simulated timeout"))
+                .thenThrow(org.springframework.web.client.HttpClientErrorException.create(
+                        org.springframework.http.HttpStatus.BAD_REQUEST, "Bad Request", null, null, null))
+                .thenReturn(new RazorpayClient.PaymentLink("plink_test_1", "https://rzp.io/i/abc123"));
+
+        assertThatThrownBy(() -> paymentService.createPaymentLink(publicId))
+                .isInstanceOf(org.springframework.web.client.ResourceAccessException.class);
+        assertThat(paymentService.createPaymentLink(publicId)).isEqualTo("https://rzp.io/i/abc123");
+
+        ArgumentCaptor<String> references = ArgumentCaptor.forClass(String.class);
+        verify(razorpayClient, times(3)).createPaymentLink(references.capture(), anyInt(), anyString(), anyString());
+        assertThat(references.getAllValues().get(0)).isEqualTo(publicId);
+        assertThat(references.getAllValues().get(1)).isEqualTo(publicId);
+        assertThat(references.getAllValues().get(2)).startsWith(publicId + "-").hasSize(40);
+
+        // The paid webhook for that link (we hold its row now) unlocks the report.
+        assertThat(deliver(webhookBody(references.getAllValues().get(2), 8900, "payment_link.paid"))).isTrue();
+    }
+
+    @Test
+    void aSuffixedReferenceStillFindsTheReportWhenWeHaveNoRowForTheLink() throws Exception {
+        assertThat(deliver(webhookBody(publicId + "-k3x", 8900, "payment_link.paid"))).isTrue();
+        assertThat(isPaid()).isTrue();
+    }
+
+    @Test
+    void anOtherClientErrorFromRazorpayIsNotRetried() {
+        when(razorpayClient.createPaymentLink(anyString(), anyInt(), anyString(), anyString()))
+                .thenThrow(org.springframework.web.client.HttpClientErrorException.create(
+                        org.springframework.http.HttpStatus.UNAUTHORIZED, "Unauthorized", null, null, null));
+
+        assertThatThrownBy(() -> paymentService.createPaymentLink(publicId))
+                .isInstanceOf(org.springframework.web.client.HttpClientErrorException.class);
+        verify(razorpayClient, times(1)).createPaymentLink(anyString(), anyInt(), anyString(), anyString());
+    }
+
+    @Test
+    void aLinkCreatedByThePreviousBackendStillWorksAfterDeploy() throws Exception {
+        // Exactly what the old code stored: plain-UUID reference, status created, 8900 paise.
+        Payment legacy = new Payment();
+        legacy.setReportPublicId(java.util.UUID.fromString(publicId));
+        legacy.setProvider("razorpay");
+        legacy.setPaymentLinkId("plink_test_1");
+        legacy.setPaymentLinkUrl("https://rzp.io/i/legacy");
+        legacy.setAmountPaise(8900);
+        legacy.setCurrency("INR");
+        legacy.setStatus(Payment.STATUS_CREATED);
+        paymentRepository.save(legacy);
+
+        // A buyer who opened that checkout before the deploy is handed the same link again...
+        assertThat(paymentService.createPaymentLink(publicId)).isEqualTo("https://rzp.io/i/legacy");
+        verify(razorpayClient, never()).createPaymentLink(anyString(), anyInt(), anyString(), anyString());
+
+        // ...and its webhook, with the plain-UUID reference, unlocks the report.
+        assertThat(deliver(webhookBody(publicId, 8900, "payment_link.paid"))).isTrue();
+        assertThat(isPaid()).isTrue();
+        assertThat(paymentRepository.findAll()).singleElement()
+                .satisfies(payment -> assertThat(payment.getStatus()).isEqualTo(Payment.STATUS_PAID));
     }
 
     @Test

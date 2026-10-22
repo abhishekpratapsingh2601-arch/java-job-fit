@@ -8,7 +8,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -83,9 +85,13 @@ public class PaymentService {
      * invoices — but only while that link is still for the current price.
      *
      * <p>Not {@code @Transactional}: the Razorpay call can take up to 30s and must not hold a pooled
-     * DB connection open. Each {@code reference_id} gets a short random suffix because Razorpay
-     * rejects a repeated one; without it, a link Razorpay created whose response we never saved
-     * (timeout, failed insert) would make the report permanently unbuyable.
+     * DB connection open.
+     *
+     * <p>{@code reference_id}: the first link for a report uses the plain public id, the format
+     * every earlier backend version understands, so rolling the backend back never strands a
+     * payment. Razorpay rejects a repeated reference, so a later link (after a price change, or
+     * when Razorpay created a link whose response we never saved) gets a short random suffix
+     * instead — otherwise that report could never be bought again.
      */
     public String createPaymentLink(String reportPublicId) {
         Report report = reportRepository.findByPublicId(parseUuid(reportPublicId))
@@ -101,11 +107,23 @@ public class PaymentService {
             return existing.get().getPaymentLinkUrl();
         }
 
-        RazorpayClient.PaymentLink link = razorpayClient.createPaymentLink(
-                referenceIdFor(report.getPublicId()),
-                priceInPaise(),
-                CURRENCY_INR,
-                buildReturnUrl(report.getPublicId().toString()));
+        UUID publicId = report.getPublicId();
+        String returnTo = buildReturnUrl(publicId.toString());
+        RazorpayClient.PaymentLink link;
+        if (paymentRepository.existsByReportPublicId(publicId)) {
+            link = razorpayClient.createPaymentLink(suffixedReferenceFor(publicId), priceInPaise(), CURRENCY_INR, returnTo);
+        } else {
+            try {
+                link = razorpayClient.createPaymentLink(publicId.toString(), priceInPaise(), CURRENCY_INR, returnTo);
+            } catch (HttpClientErrorException e) {
+                if (e.getStatusCode() != HttpStatus.BAD_REQUEST) {
+                    throw e;
+                }
+                // Most likely the plain reference already exists at Razorpay (an earlier response
+                // was lost). One retry with a fresh reference; any other 400 simply fails again.
+                link = razorpayClient.createPaymentLink(suffixedReferenceFor(publicId), priceInPaise(), CURRENCY_INR, returnTo);
+            }
+        }
 
         Payment payment = new Payment();
         payment.setReportPublicId(report.getPublicId());
@@ -223,7 +241,7 @@ public class PaymentService {
     }
 
     /** The report's public id plus "-" and three random chars: unique per link, 40 chars max. */
-    static String referenceIdFor(UUID publicId) {
+    static String suffixedReferenceFor(UUID publicId) {
         StringBuilder reference = new StringBuilder(publicId.toString()).append('-');
         for (int i = 0; i < 3; i++) {
             reference.append(SUFFIX_ALPHABET.charAt(RANDOM.nextInt(SUFFIX_ALPHABET.length())));
