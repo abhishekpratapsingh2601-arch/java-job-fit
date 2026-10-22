@@ -205,7 +205,15 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.interviewQuestions.length()").value(3))
                 .andExpect(jsonPath("$.prepPlan.length()").value(2))
                 .andExpect(jsonPath("$.premiumLockedSections").isArray())
-                .andExpect(content().string(not(containsString("Day 7:"))));
+                .andExpect(content().string(not(containsString("Day 7:"))))
+                // Paid-only sections are withheld entirely, not merely hidden by the browser.
+                .andExpect(jsonPath("$.resumeSummary").isEmpty())
+                .andExpect(jsonPath("$.coverLetter").isEmpty())
+                .andExpect(jsonPath("$.keywordPlacements").isEmpty())
+                .andExpect(jsonPath("$.linkedinHeadline").isEmpty())
+                .andExpect(jsonPath("$.linkedinAbout").isEmpty())
+                .andExpect(jsonPath("$.bulletUpgrades.length()").value(1))
+                .andExpect(jsonPath("$.matchedStrengths.length()").value(3));
     }
 
     @Test

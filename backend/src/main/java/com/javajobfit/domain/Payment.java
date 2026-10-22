@@ -133,7 +133,11 @@ public class Payment {
     }
 
     /** Records a confirmed payment. Only ever called after webhook signature verification. */
+    /** Idempotent: a replayed webhook must not overwrite the original payment id or time. */
     public void markPaid(String providerPaymentId) {
+        if (STATUS_PAID.equals(this.status)) {
+            return;
+        }
         this.providerPaymentId = providerPaymentId;
         this.status = STATUS_PAID;
         this.paidAt = Instant.now();

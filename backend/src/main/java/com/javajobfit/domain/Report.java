@@ -228,7 +228,11 @@ public class Report {
      * never be marked paid without recording when — and so every call site is easy to audit.
      * Must only be called after a payment provider webhook has been signature-verified.
      */
+    /** Idempotent: a repeated or late webhook keeps the time of the first confirmed payment. */
     public void markPaid() {
+        if (this.paid) {
+            return;
+        }
         this.paid = true;
         this.paidAt = Instant.now();
     }
