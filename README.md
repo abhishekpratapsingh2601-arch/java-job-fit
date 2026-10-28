@@ -1,5 +1,7 @@
 # JavaJobFit
 
+**Try it free: [javajobfit.com](https://javajobfit.com)** — ATS resume checker for Java & Spring Boot developers.
+
 JavaJobFit helps Java developers tailor a resume and interview prep plan to a
 specific job description.
 
